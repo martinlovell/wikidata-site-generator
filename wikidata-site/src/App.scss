@@ -1,0 +1,127 @@
+
+@import "./Style.scss";
+
+$card-width: '250px';
+
+.highlight {
+    color: red;
+}
+
+.max-80 {
+    max-width: 80%;
+}
+
+footer {
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+}
+
+.qualifiers {
+    margin-left: 50px;
+}
+
+.wiki-image {
+    box-sizing: border-box;
+    width: 248px;
+    height: 337px;
+    object-fit: cover;
+}
+
+.carousel-images {
+    width: 250px;
+    height: 337px;
+}
+
+.card-image {
+    width: 100%;
+    height: 337px;
+    object-fit: cover;
+}
+
+
+img.commons-image {
+    border: 2px solid black;
+}
+
+.link-card {
+    width: 250px;
+    // height: 40rem;
+    margin-bottom: 10px;
+    margin-top: 10px;
+
+    img.commons-image {
+        border: 0;
+    }
+}
+.section-label {
+    text-decoration: underline;
+}
+
+.info-icon {
+    margin-left: 3px;
+    margin-top: -3px;
+    color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+    :hover {
+        color: rgba(var(--bs-link-hover-color-rgb), var(--bs-link-hover-opacity, 1));
+    }
+}
+
+.link-card:hover {
+    border-color: $color;
+}
+
+ul.compact-list {
+    list-style-position: inside;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.compact-list li {
+    line-height: 1rem;
+    margin-bottom: 5pt;
+}
+
+
+div.map-view {
+    margin-top: 8px;
+    width: 250px;
+    height: 275px;
+}
+
+div.uv-wrapper {
+    width: 100%;
+    aspect-ratio: 1.9;
+}
+
+.uv-iframe {
+    width:100%;
+    height:100%;
+    flex-grow: 1; border: none; margin: 0; padding: 0;
+}
+
+.uv-content {
+    background-color: black;
+    color: white;
+    margin-top: 0;
+    .btn-default {
+        color: white !important;
+    }
+}
+
+.video-content {
+    max-width: 100%;
+    video {
+
+        max-width: 100%;
+    }
+}
+
+.map-tooltip {
+    strong {
+        text-transform: capitalize;
+    }
+    white-space: normal !important;
+    width: 100px;
+}

@@ -1,0 +1,59 @@
+$color: #00356b;
+$tooltip-color:                     white;
+$tooltip-bg:                        $color;
+$tooltip-max-width:                 350px;
+$tooltip-padding-y: 8px;
+$tooltip-padding-x: 8px;
+$tooltip-border-radius: 5px;
+
+.tooltip {
+    width: fit-content;
+    background-color: $color !important;
+    border-radius: 5px !important;
+}
+.tooltip-inner{
+    text-align: left !important;
+    background-color: $color !important;
+    border-radius: 5px !important;
+}
+
+.tooltip-arrow:before {
+    border-right-color: $color !important;
+}
+
+body {
+    font-family: "Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
+
+
+    margin: 0;
+    text-align: left;
+    background-color: #fff;
+    font-size: 1.125rem;
+    font-family: "Mallory", "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family: "YaleNew",Georgia,"Times New Roman",serif
+}
+.bg-header {
+    background-color: $color!important;
+    color: #fff;
+}
+
+h3 {
+    color: $color;
+}
+.text-font-family {
+    font-family: "YaleNew",Georgia,"Times New Roman",serif!important
+}
+
+.properties-list {
+    margin-bottom: 5rem;
+}
+
+.property-name {
+    text-transform: capitalize;
+    margin-top: 1rem;
+    margin-bottom: 0;
+}
