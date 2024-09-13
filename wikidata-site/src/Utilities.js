@@ -1,11 +1,11 @@
 import { format } from "date-fns";
-import { Carousel } from 'react-bootstrap';
+import { Accordion, Carousel } from 'react-bootstrap';
 import CommonsMedia from "./components/CommonsMedia";
+import PropertyInfo from "./components/PropertyInfo";
 
 const basename = document.querySelector('base')?.getAttribute('href') ?? '/';
 
 export const imagePath = (path) => path.startsWith('/') ? `${basename}${path}` : path;
-
 
 export const showImages = (properties) => {
     if (properties['P18'] && properties['P18']['values'] && properties['P18']['values'].length > 1) {
@@ -22,14 +22,14 @@ export const showImages = (properties) => {
     } else {
         return <img className='wiki-image' src={imagePath('/card-image.svg')} alt='missing'/>
     }
-};
+}
 
 export const formatWikiDateTime = (time) => {
     time = time?.replaceAll('-00', '-01').replace('Z', '').replace('+', '')
     try {
         const date = new Date(time);
         if (date) {
-            let dateStr = format(date, 'MM/dd/yyyy');
+            let dateStr = format(date, 'yyyy');
             if (dateStr.startsWith('01/01/')) {
                 dateStr = dateStr.replace('01/01/', '');
             }

@@ -29,14 +29,14 @@ const extractPropertyList = (properties, propertyKey) => {
     }
 }
 
-const EntityLink = ({id, description, label, properties}) => {
+const EntityLink = ({id, description, label, properties, status}) => {
     let link = `/entity/${id}`
     let additionalProperties = []
     let dob = extractFirstPropertyValue(properties, 'P569');
     let dod = extractFirstPropertyValue(properties, 'P570');
     if (dob || dod) additionalProperties.push(`${dob} - ${dod}`);
 
-    return <div className="card link-card" key={id}>
+    return <div className={'card link-card' + (status && ` status-${status}` || '')} key={id}>
                 <Link to={link} className="stretched-link"></Link>
                 {showImages(properties)}
                 <div className="card-body">

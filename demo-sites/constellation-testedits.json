@@ -1,0 +1,11 @@
+{
+    "title": "Constellations Project: Early Black Lives at Yale, 1830-1940",
+    "about": "A project to identify and share research about early Black students at Yale, 1830 to 1940",
+    "copyright": "Yale University",
+    "idList": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/wikidata-lists/entity_list.csv",
+    "bioUrlPrefix": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/biographies/",
+    "images": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/wikidata-lists/include_images_list.csv",
+    "properties": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/wikidata-lists/include_properties_list.csv",
+    "propertyOverrideUrlPrefix": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/property-value-override/",
+    "publicationsUrlPrefix": "https://raw.githubusercontent.com/yalelibrary/constellations-data/edit-demo/publications/"
+}

@@ -20,6 +20,8 @@ client = Client(cache_policy=MemoryCachePolicy(max_size=100000))
 
 wiki_bot_headers = {'User-Agent': 'YaleLibraryBot/0.0 (https://library.yale.edu; library@yale.edu)'}
 
+label_map = {}
+
 value_properties = ['P625']
 
 allowed_properties = None
@@ -228,11 +230,14 @@ def find(data, path):
     return None if rv == empty else rv
 
 def label(entity):
+    if entity.id in label_map:
+        return label_map[entity.id]
     if not entity.data:
         return None
     return find(entity.data, 'labels.en.value') or find(entity.data, 'representations.en.value')
 
-def add_to_entity_file(entity_ref):
+def add_to_entity_file(entity):
+    entity_ref = create_entity_ref(entity)
     entity_list_file = os.path.join(data_path, f'entity_list.json')
     entity_list = []
     if os.path.exists(entity_list_file):
@@ -243,39 +248,96 @@ def add_to_entity_file(entity_ref):
     with open(entity_list_file, 'w') as file:
         file.write(json.dumps(entity_list, indent=4))
 
-def load(id, bio_url_prefix = None):
-    extract = {}
-    entity = client.get(id, load=True)
-    extract['id'] = id
-    extract['description'] = f'{entity.description}'
-    extract['label'] = label(entity)
-    entity_ref = extract.copy() # copy before loading properties
-    if bio_url_prefix:
-        response = requests.get(f'{bio_url_prefix}{id}.md')
-        if response.status_code == 200:
-            extract['biographyMarkdown'] = response.text
-    extract['properties'] = load_claims(entity)
-    with open(os.path.join(data_path, f'{id}.json'), 'w') as file:
-        file.write(json.dumps(extract, indent=4))
+def create_entity_ref(entity):
+    entity_ref = {
+        'id': entity['id'],
+        'description': entity['description'],
+        'label': entity['label']
+    }
     ref_properties = ['P569', 'P19', 'P570', 'P20', 'P18', 'P69']
     entity_ref['properties'] = {}
     for ref_property in ref_properties:
-        prop = extract['properties'].get(ref_property)
+        prop = entity['properties'].get(ref_property)
         if prop:
             prop = prop.copy()
             for value in prop['values']:
                 value.pop('references', None)
                 value.pop('qualifiers', None)
             entity_ref['properties'][ref_property] = prop
-    add_to_entity_file(entity_ref)
+    return entity_ref
 
-def load_ids(ids, bio_url_prefix = None):
+def load_file_from_url(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.text
+    return None
+
+def extract_columns(column_names, line):
+    if not line:
+        return None
+    cols = line.split('\t')
+    ix = 0
+    row = {}
+    for column_name in column_names:
+        if len(cols) <= ix:
+            break
+        row[column_name] = cols[ix].strip()
+        ix += 1
+    return row
+
+
+
+def load(id, bio_url_prefix = None, property_override_url_prefix = None, publications_url_prefix = None):
+    entity = {}
+    wiki_entity = client.get(id, load=True)
+    entity['id'] = id
+    entity['description'] = f'{wiki_entity.description}'
+    entity['label'] = label(wiki_entity)
+    if bio_url_prefix:
+        text = load_file_from_url(f'{bio_url_prefix}{id}.md')
+        if text:
+            entity['biographyMarkdown'] = text
+            lines = entity['biographyMarkdown'].split('\n')
+            entity['label'] = lines[0].strip().replace('# ', '')
+            if lines[1].startswith('## '):
+                entity['description'] = lines[1].strip().replace('## ', '')
+
+
+    if publications_url_prefix:
+        text = load_file_from_url(f'{publications_url_prefix}{id}.tsv')
+        if text:
+            publications = [extract_columns(['title', 'date', 'link', 'journal', 'role', 'authors'], line) for line in text.split('\n')]
+            if publications:
+                entity['publications'] = [p for p in publications if p]
+
+    entity['properties'] = load_claims(wiki_entity)
+    if property_override_url_prefix:
+        response = requests.get(f'{property_override_url_prefix}{id}.json')
+        if response.status_code == 200:
+            try:
+                props = response.json()
+                entity['properties'].update(props)
+                rm_props = []
+                for k in entity['properties']:
+                    if not entity['properties'][k]:
+                        rm_props.append(k)
+                for k in rm_props:
+                    entity['properties'].pop(k, None)
+            except Exception as e:
+                _logger.error(f'Error loading property overrides for {id} {e}')
+                print(response.text)
+                print(e)
+
+    with open(os.path.join(data_path, f'{id}.json'), 'w') as file:
+        file.write(json.dumps(entity, indent=4))
+    add_to_entity_file(entity)
+
+def load_ids(ids, bio_url_prefix = None, property_override_url_prefix= None, publications_url_prefix = None):
     for wikidata_id in ids:
         _logger.info(colored(f'Loading {wikidata_id}', 'blue'))
-        load(wikidata_id, bio_url_prefix)
+        load(wikidata_id, bio_url_prefix, property_override_url_prefix, publications_url_prefix)
 
-
-def load_sparql_results(sparql, bio_url_prefix = None):
+def load_sparql_results(sparql, bio_url_prefix = None, property_override_url_prefix= None, publications_url_prefix = None):
     params = {'query': sparql}
     headers = wiki_bot_headers.copy()
     headers['Accept'] = 'application/json'
@@ -287,18 +349,128 @@ def load_sparql_results(sparql, bio_url_prefix = None):
             label = find(result, 'itemLabel.value')
             wikidata_id = wikidata_uri.split('/')[-1:][0]
             _logger.info(colored(f'Loading {wikidata_id}: {label}', 'blue'))
-            load(wikidata_id, bio_url_prefix)
+            load(wikidata_id, bio_url_prefix, property_override_url_prefix, publications_url_prefix)
+
+def load_id_list(id_list_url):
+    id_list = []
+    response = requests.get(id_list_url, headers=wiki_bot_headers)
+    if response.status_code == 200:
+        data = response.text
+        for line in data.split('\n'):
+            row = line.split('\t')
+            if row[0].startswith('Q'):
+                id_list.append(row[0])
+                if row[1]:
+                    label_map[row[0]] = row[1]
+    return id_list
+
+
+def compare_with_site(site):
+    changed_ids = []
+    for f in os.listdir(data_path):
+        if (f.startswith('Q') and f.endswith('.json')):
+            with open(os.path.join(data_path, f)) as local_file:
+                local_json = json.load(local_file)
+            remote_json = None
+            item_changed = False
+            response = requests.get(f'{site}/data/{f}')
+            if response.status_code == 200:
+                remote_json = response.json()
+                for item in local_json['properties'].values():
+                    remote_item = remote_json['properties'].get(item['key'])
+                    if remote_item and remote_item.get('status') == 'removed':
+                        remote_item = None
+                    if remote_item:
+                        remote_item.pop('status', None)
+                    if not remote_item:
+                        item['status'] = 'new'
+                        item_changed = True
+                    elif remote_item != item:
+                        print(remote_item)
+                        print(item)
+                        item['status'] = 'updated'
+                        item_changed = True
+
+                for item in remote_json['properties'].values():
+                    if item.get('status') == 'removed':
+                        continue
+                    local_item = local_json['properties'].get(item['key'])
+                    if not local_item:
+                        item['status'] = 'removed'
+                        local_json['properties'][item['key']] = item
+                        item_changed = True
+                if remote_json.get('label') != local_json.get('label'):
+                    local_json['labelStatus'] = 'updated'
+                    item_changed = True
+                if remote_json.get('biographyMarkdown') != local_json.get('biographyMarkdown'):
+                    local_json['biographyMarkdownStatus'] = 'updated'
+                    item_changed = True
+                if remote_json.get('description') != local_json.get('description'):
+                    local_json['descriptionStatus'] = 'updated'
+                    item_changed = True
+                if remote_json.get('publications') != local_json.get('publications'):
+                    if not remote_json.get('publications'):
+                        local_json['publicationsStatus'] = 'new'
+                    elif not local_json.get('publications'):
+                        local_json['publicationsStatus'] = 'removed'
+                        local_json['publications'] = remote_json.get('publications')
+                    else:
+                        local_json['publicationsStatus'] = 'updated'
+                    item_changed = True
+            else:
+                local_json['status'] = 'new'
+                item_changed = True
+
+            if item_changed:
+                _logger.info(f'Updating {f}')
+                changed_ids.append(local_json['id'])
+                with open(os.path.join(data_path, f), 'w') as local_file:
+                    local_file.write(json.dumps(local_json, indent=4))
+            else:
+                _logger.info(f'No update for {f}')
+
+
+    # special treatment for entity json
+    f = 'entity_list.json'
+    with open(os.path.join(data_path, f)) as local_file:
+        local_json = json.load(local_file)
+    remote_json = None
+    item_changed = False
+    response = requests.get(f'{site}/data/{f}')
+    if response.status_code == 200:
+        remote_json = response.json()
+    remote_item_map = {x['id']: x for x in remote_json}
+    local_item_map = {x['id']: x for x in local_json}
+    for item in local_json:
+        remote_item = remote_item_map.get(item['id'])
+        if not remote_item:
+            item['status'] = 'new'
+        elif item['id'] in changed_ids:
+            item['status'] = 'updated'
+    for item in remote_json:
+        if not local_item_map[item['id']]:
+            item['status'] = 'removed'
+            local_json.append(item)
+
+
+    with open(os.path.join(data_path, f), 'w') as local_file:
+        local_file.write(json.dumps(local_json, indent=4))
+
+
+
+
 
 def main():
     global allowed_properties, allowed_images
     configure_logging('wikiloader.log')
     parser = argparse.ArgumentParser(description='Load wikidata')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--entity-id',  required=False, help='Entity id to load (eg Q20145)')
-    group.add_argument('--sparql-file',  required=False, help='SPARQL query file to get list of ids')
-    group.add_argument('--site-file',  required=False, help='JSON file containing query and or SPARQL with site information')
-    group.add_argument('--id-file',  required=False, help='File with a list of entity ids')
-    parser.add_argument('--append',  action='store_true', help='Append to existing entities')
+    group.add_argument('--entity-id', required=False, help='Entity id to load (eg Q20145)')
+    group.add_argument('--sparql-file', required=False, help='SPARQL query file to get list of ids')
+    group.add_argument('--site-file', required=False, help='JSON file containing query and or SPARQL with site information')
+    group.add_argument('--id-file', required=False, help='File with a list of entity ids')
+    parser.add_argument('--append', action='store_true', help='Append to existing entities')
+    parser.add_argument('--compare-site', required=False, help='Site for comparing values')
     args = parser.parse_args()
 
     if not args.append:
@@ -311,6 +483,8 @@ def main():
             site_json = json.load(f)
         _logger.info(f'Processing {site_json['title']} from {args.site_file}.')
         bio_url_prefix = site_json.get('bioUrlPrefix')
+        property_override_url_prefix = site_json.get('propertyOverrideUrlPrefix')
+        publications_url_prefix = site_json.get('publicationsUrlPrefix')
 
         if site_json.get('properties'):
             response = requests.get(site_json.get('properties'))
@@ -334,13 +508,14 @@ def main():
                     if row[0].startswith('Q'):
                         allowed_images.append(row[2])
                 _logger.info(f'allowed images update with {allowed_images}')
-
-
-
         if site_json.get('idList'):
-            load_ids(site_json['idList'], bio_url_prefix)
+            id_list = site_json['idList']
+
+            if isinstance(id_list, str):
+                id_list = load_id_list(id_list)
+            load_ids(id_list, bio_url_prefix, property_override_url_prefix, publications_url_prefix)
         if site_json.get('sparql'):
-            load_sparql_results(site_json['sparql'], bio_url_prefix)
+            load_sparql_results(site_json['sparql'], bio_url_prefix, property_override_url_prefix, publications_url_prefix)
 
         shutil.copyfile(args.site_file, os.path.join(data_path, 'site.json'))
     elif args.entity_id:
@@ -354,6 +529,9 @@ def main():
         with open(args.sparql_file, 'r') as file:
             sparql = file.read()
         load_sparql_results(sparql)
+
+    if args.compare_site:
+        compare_with_site(args.compare_site)
 
 if __name__ == '__main__':
     main()

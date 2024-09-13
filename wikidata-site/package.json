@@ -18,6 +18,7 @@
     "react-markdown": "^9.0.1",
     "react-router-dom": "^6.26.1",
     "react-scripts": "5.0.1",
+    "remark-gfm": "^4.0.0",
     "sass": "^1.77.8",
     "web-vitals": "^2.1.4",
     "yale-ui-component-library": "^2.4.0"

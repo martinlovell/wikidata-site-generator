@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { GeoAltFill, InfoCircleFill } from 'react-bootstrap-icons';
+import { BoxArrowUpRight, GeoAltFill, InfoCircleFill } from 'react-bootstrap-icons';
 import { formatWikiDateTime, showImages } from './Utilities';
 import UVViewer from './components/UV'
 import {OverlayTrigger, Tooltip } from 'react-bootstrap';
@@ -8,7 +8,8 @@ import Map from './components/Map';
 import { VideoViewer } from './components/VideoViewer';
 import CommonsMedia from './components/CommonsMedia';
 import Markdown from 'react-markdown'
-import { set } from 'date-fns';
+import remarkGfm from 'remark-gfm'
+import PropertyInfo from './components/PropertyInfo';
 
 // P569 DOB   P19(place)
 // P570 DOD   P20(place)
@@ -38,14 +39,14 @@ const sortProperties = (props) => {
 
 const ExternalId = ({value}) => <>{value.text}</>
 
-const WikidateItem = ({value, setHighlightedPlace, map}) => {
+const WikidataItem = ({value, setHighlightedPlace, map}) => {
     const additional_data = [];
     if (value['data'] && value['data']['properties'] && value['data']['properties']['P625']) {
         const pvalue = value['data']['properties']['P625']['values'][0]
         if (pvalue['value-type'] === 'globe-coordinate') {
             const long = pvalue['longitude'];
             const lat = pvalue['latitude'];
-            additional_data.push(<a href={`https://maps.google.com/?q=${lat},${long}`}
+            additional_data.push(<a key='2' href={`https://maps.google.com/?q=${lat},${long}`}
                 onClick={(e)=>{e.preventDefault(); map.current && map.current.toggleFullscreen()}}
                 onMouseEnter={(e)=>{e.preventDefault(); setHighlightedPlace(`${value['text']}-${lat}-${long}`);}} target='_blank' rel="noreferrer" ><GeoAltFill className='info-icon'/></a>)
         }
@@ -78,7 +79,7 @@ const format_amount = (amount) => {
 const PropertyValue = ({value, setHighlightedPlace, map}) => {
     if (value['value-type'] === 'external-id') return <ExternalId value={value}/>
     if (value['value-type'] === 'commonsMedia') return <CommonsMedia value={value} className={'max-80'} />
-    if (value['value-type'] === 'wikibase-item') return <WikidateItem value={value} setHighlightedPlace={setHighlightedPlace} map={map} />
+    if (value['value-type'] === 'wikibase-item') return <WikidataItem value={value} setHighlightedPlace={setHighlightedPlace} map={map} />
     if (value['value-type'] === 'time') return <Time value={value} />
     if (value['value-type'] === 'url') return <Url value={value} />
     if (value['value-type'] === 'globe-coordinate') return <GlobeCoordinate value={value} />
@@ -87,26 +88,43 @@ const PropertyValue = ({value, setHighlightedPlace, map}) => {
     return <div className='highlight'>{value['value-type']}</div>
 }
 
+//'title', 'date', 'link', 'journal', 'role', 'authors']
+const Publication = ({publication, ix}) => {
+    return <div key={ix}>{publication['role'] && `${publication['role']}: `}
+      <em>{publication['title']}</em>
+      {publication['journal'] && `, ${publication['journal']}`}
+      {publication['date'] && ` - ${publication['date']}`}
+      {publication['authors'] && ` (with: ${publication['authors']})`}
+      {publication['link'] && <a href={publication['link']} title={publication['title']} target="_blank"><BoxArrowUpRight className='info-icon' /></a> }
+    </div>
+}
+
+
+function listPublications(publications, publicationsStatus) {
+    if (publications)
+        return <div className={publicationsStatus && `status-${publicationsStatus}` || ''}><h3 className='property-name'>Publications</h3><div className='publications'>{publications.map((p, ix) => <Publication publication={p} ix={ix} />)}</div></div>
+}
 
 function listProperties(properties, setHighlightedPlace, map) {
     return sortProperties(Object.values(properties)).filter((property) => !specialProperties.includes(property.key)).map((property, index) => {
-        return <div key={index}>{!noNamePropeties.includes(property.key) && <h3 className='property-name'>{property.property.label}</h3>}
+        return <div key={index} className={property['status'] && `status-${property['status']}` || ''}>{!noNamePropeties.includes(property.key) && <h3 className='property-name'>{property.property.label}</h3>}
+            <PropertyInfo property={property} />
             {property.values.map((value, index) =>
-                    <div className='property-values' key={index}><div className='font-weight-bold'><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map}/>{dateQualifiers(value['qualifiers'])}
-                        {(value.references) &&
-                        <OverlayTrigger
-                            placement='right'
-                            overlay={
-                                <Tooltip id={`tooltip-${index}`} className='bg-header'>
-                                    {value.references && <><strong className='section-label'>References</strong> {listReferences(value.references, setHighlightedPlace, map)}</>}
-                                </Tooltip>
-                            }
-                        >
-                            <InfoCircleFill className='info-icon'/>
-                        </OverlayTrigger>}
-
-                    </div>
-                        {value['qualifiers'] && <div className='qualifiers' key='qualifiers'>{listQualifiers(value['qualifiers'], setHighlightedPlace, map)}</div>}
+                    <div className='property-values' key={index}>
+                        <div className='font-weight-bold'><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map}/>{dateQualifiers(value['qualifiers'])}
+                            {(value.references) &&
+                            <OverlayTrigger
+                                placement='right'
+                                overlay={
+                                    <Tooltip id={`tooltip-${index}`} className='bg-header'>
+                                        {value.references && <><strong className='section-label'>References</strong> {listReferences(value.references, setHighlightedPlace, map)}</>}
+                                    </Tooltip>
+                                }
+                            >
+                                <InfoCircleFill className='info-icon'/>
+                            </OverlayTrigger>}
+                        </div>
+                        {value['qualifiers'] && <div className='qualifiers'>{listQualifiers(value['qualifiers'], setHighlightedPlace, map)}</div>}
                     </div>
             )}
         </div>;
@@ -127,14 +145,14 @@ function dateQualifiers(properties) {
         const pitValue = formatWikiDateTime(pointInTimeProp['values'][0]['text']);
         return <> ({pitValue})</>;
     } else {
-        return <></>
+        return
     }
 }
 
 function listQualifiers(properties, setHighlightedPlace, map) {
     const specialProps = [startTime, endTime, pointInTime];
     return properties.map((property, index) => {
-            if (specialProps.includes(property.key)) return <></>;
+            if (specialProps.includes(property.key)) return;
             return (
                 <div key={index} className='row'>
                     <div className='col-auto font-italic' key='label'>{property.property.label}:</div>
@@ -216,17 +234,20 @@ const WikidataEntity = () => {
 
     if (entityData) {
         return <>
-            {entityData.biographyMarkdown ? <></> : <><h1>{entityData.label}</h1>{entityData.description && <h2>{entityData.description}</h2>}</>}
+            {entityData.biographyMarkdown ? <></> : <><h1 className={(entityData['labelStatus'] && ` status-${entityData['labelStatus']}` || '')}>{entityData.label}</h1>{entityData.description && <h2 className={(entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}` || '')}>{entityData.description}</h2>}</>}
             <UVViewer manifestProperties={entityData.properties['P6108']} />
             <VideoViewer videoProperties={entityData.properties['P10']} />
             <div className='row'>
                 <div className='col-lg order-2 order-lg-1 properties-list mt-3'>
-                {entityData.biographyMarkdown && <Markdown>{entityData.biographyMarkdown}</Markdown>}
+                {entityData.biographyMarkdown && <div className={'markdown' + (entityData['biographyMarkdownStatus'] && ` status-${entityData['biographyMarkdownStatus']}` || '')}><Markdown remarkPlugins={[remarkGfm]}>{entityData.biographyMarkdown}</Markdown></div>}
+                {
+                    entityData['publications'] && listPublications(entityData['publications'], entityData['publicationsStatus'])
+                }
                 {
                     listProperties(entityData.properties, setHighlightedPlace, map)
                 }
                 </div>
-                <div className='col-lg order-1 order-lg-2 mt-3'><div className='float-lg-end'>{showImages(entityData.properties)}<Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map></div></div>
+                <div className='col-lg order-1 order-lg-2 mt-3'><div className='float-lg-end'><PropertyInfo property={entityData.properties['P18']}/>{showImages(entityData.properties)}<Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map></div></div>
             </div>
         </>;
     } else {

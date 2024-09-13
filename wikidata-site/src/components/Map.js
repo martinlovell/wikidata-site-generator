@@ -8,9 +8,9 @@ import { imagePath } from "../Utilities";
 
 var defaultIcon = L.icon({
     iconUrl: imagePath('/geo-alt-fill.svg'),
-    iconSize: [16, 16],
-    iconAnchor: [8, 16],
-    popupAnchor: [0, -16]
+    iconSize: [20, 20],
+    iconAnchor: [10, 20],
+    popupAnchor: [0, -20]
 });
 var primaryIcon = L.icon({
     iconUrl: imagePath('/geo-alt-fill.svg'),
@@ -23,7 +23,6 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
     let map = useRef(null);
     if (refpass) {
         map = refpass;
-        console.log(refpass);
     }
     useLayoutEffect(() => {
         try {
@@ -53,11 +52,11 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
                 });
                 if (points.length > 1) {
                     map.current.fitBounds(points);
-                    if (map.current.getZoom() > 10) {
-                        map.current.setZoom(10);
+                    if (map.current.getZoom() > 6) {
+                        map.current.setZoom(6);
                     }
                 } else {
-                    map.current.setZoom(10);
+                    map.current.setZoom(6);
                 }
                 let fullscreenchange = null;
                 if ('onfullscreenchange' in document) {
@@ -72,11 +71,11 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
                         if (e.target?.id == id) {
                             if (points.length > 1) {
                                 map.current.fitBounds(points);
-                                if (map.current.getZoom() > 10) {
-                                    map.current.setZoom(10);
+                                if (map.current.getZoom() > 6) {
+                                    map.current.setZoom(6);
                                 }
                             } else {
-                                map.current.setZoom(10);
+                                map.current.setZoom(6);
                             }
                         }
                     })

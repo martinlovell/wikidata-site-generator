@@ -17,7 +17,7 @@ export const CommonsImage = ({imageInfo, className, video}) => {
                     Your browser does not support the video tag.
                 </video>
     } else {
-        console.log(imageInfo);
+        //console.log(imageInfo);
     }
 }
 
