@@ -18,14 +18,14 @@ data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wikidata-
 
 client = Client(cache_policy=MemoryCachePolicy(max_size=100000))
 
-wiki_bot_headers = {'User-Agent': 'YaleLibraryBot/0.0 (https://library.yale.edu; library@yale.edu)'}
+wiki_bot_headers = {'User-Agent': 'YaleLibraryDownloader/0.0 (https://library.yale.edu; library@yale.edu)'}
 
 label_map = {}
 
 value_properties = ['P625']
 
 allowed_properties = None
-allowed_images = None
+allowed_images = {}
 
 def configure_logging(name):
     root_logger = logging.getLogger()
@@ -145,11 +145,11 @@ def snack_data(snack):
                             if rgb_im.size[0] > 500:
                                 rgb_im.thumbnail((500,500), Image.LANCZOS)
                             rgb_im.save(f'{os.path.join(data_path, data_value)}.jpg')
-                            _logger.info(f'Converted image: {image_info[0]['url']} to /data/{data_value}.jpg')
+                            _logger.info(f'Converted image: {image_info[0]["url"]} to /data/{data_value}.jpg')
                             image_info[0]['url'] = f'/data/{data_value}.jpg'
                             image_info[0]['mime'] = 'image/jpeg'
                         except Exception as e:
-                            _logger.error(f'Unable to convert image {image_info[0]['url']}', e)
+                            _logger.error(f'Unable to convert image {image_info[0]["url"]}', e)
                             pass
 
                 value_data['image-info'] = image_info
@@ -357,13 +357,22 @@ def load_id_list(id_list_url):
     if response.status_code == 200:
         data = response.text
         for line in data.split('\n'):
-            row = line.split('\t')
+            row = line.split(None, 1)
             if row[0].startswith('Q'):
                 id_list.append(row[0])
+                if len(row) < 2:
+                    print(line)
                 if row[1]:
                     label_map[row[0]] = row[1]
     return id_list
 
+def get_response_json(response):
+    if response.status_code == 200:
+        try:
+            return response.json()
+        except:
+            pass
+    return None
 
 def compare_with_site(site):
     changed_ids = []
@@ -374,8 +383,8 @@ def compare_with_site(site):
             remote_json = None
             item_changed = False
             response = requests.get(f'{site}/data/{f}')
-            if response.status_code == 200:
-                remote_json = response.json()
+            remote_json = get_response_json(response)
+            if remote_json:
                 for item in local_json['properties'].values():
                     remote_item = remote_json['properties'].get(item['key'])
                     if remote_item and remote_item.get('status') == 'removed':
@@ -448,7 +457,7 @@ def compare_with_site(site):
         elif item['id'] in changed_ids:
             item['status'] = 'updated'
     for item in remote_json:
-        if not local_item_map[item['id']]:
+        if not item['id'] in local_item_map:
             item['status'] = 'removed'
             local_json.append(item)
 
@@ -481,7 +490,7 @@ def main():
     if args.site_file:
         with open(args.site_file) as f:
             site_json = json.load(f)
-        _logger.info(f'Processing {site_json['title']} from {args.site_file}.')
+        _logger.info(f'Processing {site_json["title"]} from {args.site_file}.')
         bio_url_prefix = site_json.get('bioUrlPrefix')
         property_override_url_prefix = site_json.get('propertyOverrideUrlPrefix')
         publications_url_prefix = site_json.get('publicationsUrlPrefix')
@@ -492,10 +501,12 @@ def main():
                 data = response.text
                 allowed_properties = []
                 for line in data.split('\n'):
-                    row = line.split('\t')
+                    row = line.split(None, 1)
                     if row[0].startswith('P'):
                         entity_data[row[0]] = {'label': row[1]}
                         allowed_properties.append(row[0])
+                entity_data['P625'] = {'label': 'coordinate location'}
+                allowed_properties.append('P625')
                 _logger.info(f'allowed properties update with {allowed_properties}')
 
         if site_json.get('images'):
@@ -504,9 +515,9 @@ def main():
                 data = response.text
                 allowed_images = []
                 for line in data.split('\n'):
-                    row = line.split('\t')
+                    row = line.split(None, 1)
                     if row[0].startswith('Q'):
-                        allowed_images.append(row[2])
+                        allowed_images[row[0]] = allowed_images.get(row[0], []).append(row[2])
                 _logger.info(f'allowed images update with {allowed_images}')
         if site_json.get('idList'):
             id_list = site_json['idList']
