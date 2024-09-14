@@ -46,7 +46,7 @@ def lookup_entity_data(entity_id):
         for key in [claim_key for claim_key in claims.keys() if claim_key in value_properties]:
             filtered_claims[key] = claims[key]
         if filtered_claims:
-            additional_data = load_properties(filtered_claims, False)
+            additional_data = load_properties(None, filtered_claims, False)
             data['properties'] = additional_data
     else:
         _logger.error(f'No data for {entity_id} {entity.__dict__}')
@@ -65,7 +65,7 @@ class properties_dict(dict):
 entity_data = properties_dict({})
 
 
-def snack_data(snack):
+def snack_data(snack, allowed_image_list):
     value_data = None
     if snack:
         datatype = snack['datatype']
@@ -128,7 +128,8 @@ def snack_data(snack):
                 data_value = find(snack, 'datavalue.value')
                 if not data_value:
                     return None
-                if allowed_images and not data_value in allowed_images:
+                if allowed_image_list and not data_value in allowed_image_list:
+                    _logger.info(colored(f'skipping image {data_value}', 'yellow'))
                     return None
                 value_data['name'] = data_value
                 info_url = f'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo|info&inprop=url&iiprop=url|size|mime&format=json&titles=File:{requests.utils.quote(data_value)}'
@@ -156,14 +157,14 @@ def snack_data(snack):
     return value_data
 
 
-def _load_props(props):
+def _load_props(props, allowed_images = []):
     if not props:
         return []
     props_data = []
     for key in props.keys():
         prop_data = {'key': key, 'property': entity_data[key], 'values': []}
         for prop in props[key]:
-            data = snack_data(prop)
+            data = snack_data(prop, allowed_images)
             if data:
                 prop_data['values'].append(data)
         if prop_data['values']:
@@ -171,7 +172,7 @@ def _load_props(props):
     return props_data
 
 
-def load_properties(entity, include_refs_and_quals = True):
+def load_properties(entity_id, entity, include_refs_and_quals = True):
     all_props = {}
     property_keys = entity.keys()
     if allowed_properties:
@@ -180,7 +181,7 @@ def load_properties(entity, include_refs_and_quals = True):
         property_data = {'key': key, 'property': entity_data[key], 'values': []}
         for value in entity[key]:
             mainsnack = value.get('mainsnak', None)
-            value_data = snack_data(mainsnack)
+            value_data = snack_data(mainsnack, allowed_images.get(entity_id))
             if not value_data:
                 _logger.error(colored(f'No data for {key}', 'red'))
                 print(mainsnack)
@@ -213,7 +214,7 @@ def load_properties(entity, include_refs_and_quals = True):
 
 def load_claims(entity):
     entity_claims = find(entity.data, 'claims')
-    property_data = load_properties(entity_claims)
+    property_data = load_properties(entity.id, entity_claims)
     return property_data
 
 
@@ -358,6 +359,9 @@ def load_id_list(id_list_url):
         data = response.text
         for line in data.split('\n'):
             row = line.split(None, 1)
+            if len(row) < 2:
+                _logger.info(f'skipping row in ID list [{line}]')
+                continue
             if row[0].startswith('Q'):
                 id_list.append(row[0])
                 if len(row) < 2:
@@ -395,8 +399,6 @@ def compare_with_site(site):
                         item['status'] = 'new'
                         item_changed = True
                     elif remote_item != item:
-                        print(remote_item)
-                        print(item)
                         item['status'] = 'updated'
                         item_changed = True
 
@@ -466,7 +468,36 @@ def compare_with_site(site):
         local_file.write(json.dumps(local_json, indent=4))
 
 
+def load_image_list(file):
+    response = requests.get(file)
+    if response.status_code == 200:
+        data = response.text
+        for line in data.split('\n'):
+            row = line.split('\t')
+            if len(row) < 3:
+                _logger.info(f'skipping row [{line}]')
+                continue
+            if row[0].startswith('Q'):
+                images = allowed_images.get(row[0], [])
+                images.append(row[2])
+                allowed_images[row[0]] = images
 
+def load_properties_list(file):
+    global allowed_properties
+    response = requests.get(file)
+    if response.status_code == 200:
+        data = response.text
+        allowed_properties = []
+        for line in data.split('\n'):
+            row = line.split(None, 1)
+            if len(row) < 2:
+                _logger.info(f'skipping row [{line}]')
+                continue
+            if row[0].startswith('P'):
+                entity_data[row[0]] = {'label': row[1]}
+                allowed_properties.append(row[0])
+        entity_data['P625'] = {'label': 'coordinate location'}
+        allowed_properties.append('P625')
 
 
 def main():
@@ -496,32 +527,15 @@ def main():
         publications_url_prefix = site_json.get('publicationsUrlPrefix')
 
         if site_json.get('properties'):
-            response = requests.get(site_json.get('properties'))
-            if response.status_code == 200:
-                data = response.text
-                allowed_properties = []
-                for line in data.split('\n'):
-                    row = line.split(None, 1)
-                    if row[0].startswith('P'):
-                        entity_data[row[0]] = {'label': row[1]}
-                        allowed_properties.append(row[0])
-                entity_data['P625'] = {'label': 'coordinate location'}
-                allowed_properties.append('P625')
-                _logger.info(f'allowed properties update with {allowed_properties}')
+            load_properties_list(site_json.get('properties'))
+            _logger.info(f'allowed properties update with {allowed_properties}')
 
         if site_json.get('images'):
-            response = requests.get(site_json.get('images'))
-            if response.status_code == 200:
-                data = response.text
-                allowed_images = []
-                for line in data.split('\n'):
-                    row = line.split(None, 1)
-                    if row[0].startswith('Q'):
-                        allowed_images[row[0]] = allowed_images.get(row[0], []).append(row[2])
-                _logger.info(f'allowed images update with {allowed_images}')
+            load_image_list(site_json.get('images'))
+            _logger.info(f'allowed images update with {allowed_images}')
+
         if site_json.get('idList'):
             id_list = site_json['idList']
-
             if isinstance(id_list, str):
                 id_list = load_id_list(id_list)
             load_ids(id_list, bio_url_prefix, property_override_url_prefix, publications_url_prefix)
