@@ -7,7 +7,9 @@ const About = ({about, sparql})  => {
         fetch(`${basename}/LATEST_VERSION`)
         .then(response => response.text())
         .then(data => {
-            setLatestVersion(data)
+            if (!data.indexOf('html')) {
+                setLatestVersion(data)
+            }
         })
         .catch(error => {});
     }, [basename]);

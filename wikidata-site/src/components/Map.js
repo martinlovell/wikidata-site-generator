@@ -12,6 +12,12 @@ var defaultIcon = L.icon({
     iconAnchor: [10, 20],
     popupAnchor: [0, -20]
 });
+var tackIcon = L.icon({
+    iconUrl: imagePath('/pin-angle-fill.svg'),
+    iconSize: [20, 20],
+    iconAnchor: [0, 20],
+    popupAnchor: [0, -20]
+});
 var primaryIcon = L.icon({
     iconUrl: imagePath('/geo-alt-fill.svg'),
     iconSize: [16 * 2, 16 * 2],
@@ -19,7 +25,7 @@ var primaryIcon = L.icon({
     popupAnchor: [0, -32]
 });
 
-const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => {
+const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon}) => {
     let map = useRef(null);
     if (refpass) {
         map = refpass;
@@ -42,7 +48,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
                 }).addTo(map.current);
                 let points = [];
                 places?.forEach((place)=>{
-                    let x = L.marker([place.lat, place.long], {'icon': place.primary ? primaryIcon : defaultIcon, '_id': `${place.value}-${place.lat}-${place.long}` }).addTo(map.current);
+                    let x = L.marker([place.lat, place.long], {'icon': place.primary ? primaryIcon : (icon === 'pin' ? tackIcon : defaultIcon), '_id': `${place.value}-${place.lat}-${place.long}` }).addTo(map.current);
                     if (place.primary) {
                         x.bindPopup(`<div class="map-tooltip"><strong>${place.value}</strong></div>`)
                         x.openPopup();
