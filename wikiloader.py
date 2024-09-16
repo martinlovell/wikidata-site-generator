@@ -614,9 +614,6 @@ def main():
     parser.add_argument('--cache-path', required=False, help=f'Path to wikidata cache (default {wiki_cache_path})')
     args = parser.parse_args()
 
-    extract_location_information()
-    exit(0)
-
     if args.data_path:
         data_path = args.data_path
     if args.cache_path:
