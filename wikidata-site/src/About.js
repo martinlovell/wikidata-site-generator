@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const About = ({about, sparql})  => {
     let [latestVersion, setLatestVersion] = useState();
@@ -9,7 +9,7 @@ const About = ({about, sparql})  => {
         .then(data => {
             setLatestVersion(data)
         })
-        .catch(error => console.error(error));
+        .catch(error => {});
     }, [basename]);
     return <>
         <h1>About</h1>
