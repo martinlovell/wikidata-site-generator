@@ -4,7 +4,7 @@ const About = ({about, sparql})  => {
     let [latestVersion, setLatestVersion] = useState();
     const basename = document.querySelector('base')?.getAttribute('href') ?? '/'
     useEffect(()=>{
-        fetch(`${basename}/LATEST_VERSION`)
+        fetch(`${basename}/LATEST_VERSION.txt`)
         .then(response => response.text())
         .then(data => {
             if (!data.indexOf('html')) {
