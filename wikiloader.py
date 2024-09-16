@@ -1,7 +1,5 @@
 import logging
 import argparse
-from wikidata.client import Client
-from wikidata.cache import MemoryCachePolicy
 from termcolor import colored
 import json
 import requests
@@ -9,6 +7,8 @@ import os
 import re
 from PIL import Image
 import shutil
+import dateparser
+import gzip
 
 _logger = logging.getLogger(__name__)
 
@@ -16,9 +16,20 @@ sparql_endpoint = 'https://query.wikidata.org/sparql'
 
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wikidata-site/public/data')
 
-client = Client(cache_policy=MemoryCachePolicy(max_size=100000))
+wiki_cache_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wiki-cache')
+
+disable_cache_check = False
+use_image_cache = True
+
+if not os.path.exists(data_path):
+    os.makedirs(data_path)
+if not os.path.exists(wiki_cache_path):
+    os.makedirs(wiki_cache_path)
+
 
 wiki_bot_headers = {'User-Agent': 'YaleLibraryDownloader/0.0 (https://library.yale.edu; library@yale.edu)'}
+requests_session = requests.Session()
+requests_session.headers.update(wiki_bot_headers)
 
 label_map = {}
 
@@ -37,11 +48,42 @@ def configure_logging(name):
     fh_info.setLevel(log_level)
     root_logger.addHandler(fh_info)
 
+def load_wikidata_entity(id):
+    cache_file = os.path.join(wiki_cache_path, f'{id}.json.gz')
+    existing_data = None
+    if os.path.exists(cache_file):
+        with gzip.open(cache_file, 'rt') as cf:
+            try:
+                existing_data = json.loads(cf.read())
+            except:
+                _logger.error(f'Unable to read cache for {id}')
+    if existing_data and disable_cache_check:
+        return existing_data
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{id}.json'
+    headers = {}
+    if existing_data:
+        modifications = existing_data.get('modified')
+        dt = dateparser.parse(modifications)
+        headers['If-Modified-Since'] = dt.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    response = requests_session.get(url, headers=headers)
+    if response.status_code == 200:
+        response_json = response.json()
+        downloaded_data = response_json.get('entities', {}).get(id, None)
+        _logger.debug(f'adding to cache {id}')
+        with gzip.open(cache_file, 'wt') as cf:
+            cf.write(json.dumps(downloaded_data))
+        return downloaded_data
+    elif response.status_code == 304:
+        _logger.debug(f'using cache {id}')
+        return existing_data
+    return None
+
+
 def lookup_entity_data(entity_id):
-    entity = client.get(entity_id, load=True)
+    entity = load_wikidata_entity(entity_id)
     data = {'label': label(entity)}
-    if entity.data:
-        claims = entity.data.get('claims', {})
+    if entity:
+        claims = entity.get('claims', {})
         filtered_claims = {}
         for key in [claim_key for claim_key in claims.keys() if claim_key in value_properties]:
             filtered_claims[key] = claims[key]
@@ -49,9 +91,8 @@ def lookup_entity_data(entity_id):
             additional_data = load_properties(None, filtered_claims, False)
             data['properties'] = additional_data
     else:
-        _logger.error(f'No data for {entity_id} {entity.__dict__}')
+        _logger.error(f'No data for {entity_id}')
     return data
-
 
 class properties_dict(dict):
     def __missing__(self, key):
@@ -64,6 +105,46 @@ class properties_dict(dict):
 
 entity_data = properties_dict({})
 
+def load_image_info(wikimedia_name):
+    if use_image_cache:
+        cache_file = os.path.join(wiki_cache_path, f'{wikimedia_name}.info.gz')
+        image_info = None
+        if os.path.exists(cache_file):
+            with gzip.open(cache_file, 'rt') as cf:
+                try:
+                    image_info = json.loads(cf.read())
+                except:
+                    _logger.error(f'Unable to read cache for {id}')
+        if image_info:
+            return image_info
+
+    info_url = f'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo|info&inprop=url&iiprop=url|size|mime&format=json&titles=File:{requests.utils.quote(wikimedia_name)}'
+    resp = requests_session.get(info_url)
+    info = resp.json()
+    image_info = find(info, 'query.pages.*.imageinfo')
+    if image_info and use_image_cache:
+        with gzip.open(cache_file, 'wt') as cf:
+            cf.write(json.dumps(image_info))
+    return image_info
+
+def convert_image(data_value, url, image_info_entry):
+    destination_file = f'{os.path.join(data_path, data_value)}.jpg'
+    cache_file = os.path.join(wiki_cache_path, f'{data_value}.jpg')
+    if use_image_cache and os.path.exists(cache_file):
+        image_info_entry['mime'] = 'image/jpeg'
+        image_info_entry['url'] = f'/data/{data_value}.jpg'
+        shutil.copy(cache_file, destination_file)
+        return
+    img = Image.open(requests_session.get(url, stream=True).raw)
+    rgb_im = img.convert("RGB")
+    if rgb_im.size[0] > 500:
+        rgb_im.thumbnail((500,500), Image.LANCZOS)
+    rgb_im.save(destination_file)
+    _logger.info(f'Converted image: {image_info_entry["url"]} to /data/{data_value}.jpg')
+    image_info_entry['url'] = f'/data/{data_value}.jpg'
+    image_info_entry['mime'] = 'image/jpeg'
+    if use_image_cache:
+        shutil.copy(destination_file, cache_file)
 
 def snack_data(snack, allowed_image_list):
     value_data = None
@@ -111,7 +192,7 @@ def snack_data(snack, allowed_image_list):
                 data_value = find(snack, 'datavalue.value')
                 value_data['name'] = data_value
                 url = f'https://commons.wikimedia.org/w/api.php?action=query&prop=revisions&rvslots=*&rvprop=content&format=json&titles={data_value}'
-                resp = requests.get(url=url, headers=wiki_bot_headers)
+                resp = requests_session.get(url)
                 value_data['geo-shape'] = resp.json()
             case 'quantity':
                 unit = None
@@ -132,26 +213,15 @@ def snack_data(snack, allowed_image_list):
                     _logger.info(colored(f'skipping image {data_value}', 'yellow'))
                     return None
                 value_data['name'] = data_value
-                info_url = f'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo|info&inprop=url&iiprop=url|size|mime&format=json&titles=File:{requests.utils.quote(data_value)}'
-                resp = requests.get(url=info_url, headers=wiki_bot_headers)
-                info = resp.json()
-                image_info = find(info, 'query.pages.*.imageinfo')
+                image_info = load_image_info(data_value)
                 if image_info:
                     if image_info[0]['mime'] == 'image/tiff':
                         image_info[0]['name'] = data_value
                         url = image_info[0]['url']
                         try:
-                            img = Image.open(requests.get(url, stream=True, headers=wiki_bot_headers).raw)
-                            rgb_im = img.convert("RGB")
-                            if rgb_im.size[0] > 500:
-                                rgb_im.thumbnail((500,500), Image.LANCZOS)
-                            rgb_im.save(f'{os.path.join(data_path, data_value)}.jpg')
-                            _logger.info(f'Converted image: {image_info[0]["url"]} to /data/{data_value}.jpg')
-                            image_info[0]['url'] = f'/data/{data_value}.jpg'
-                            image_info[0]['mime'] = 'image/jpeg'
+                            convert_image(data_value, url, image_info[0])
                         except Exception as e:
                             _logger.error(f'Unable to convert image {image_info[0]["url"]}', e)
-                            pass
 
                 value_data['image-info'] = image_info
     return value_data
@@ -213,8 +283,8 @@ def load_properties(entity_id, entity, include_refs_and_quals = True):
 
 
 def load_claims(entity):
-    entity_claims = find(entity.data, 'claims')
-    property_data = load_properties(entity.id, entity_claims)
+    entity_claims = find(entity, 'claims')
+    property_data = load_properties(entity['id'], entity_claims)
     return property_data
 
 
@@ -231,11 +301,11 @@ def find(data, path):
     return None if rv == empty else rv
 
 def label(entity):
-    if entity.id in label_map:
-        return label_map[entity.id]
-    if not entity.data:
+    if not entity:
         return None
-    return find(entity.data, 'labels.en.value') or find(entity.data, 'representations.en.value')
+    if entity['id'] in label_map:
+        return label_map[entity['id']]
+    return find(entity, 'labels.en.value') or find(entity, 'representations.en.value')
 
 def add_to_entity_file(entity):
     entity_ref = create_entity_ref(entity)
@@ -268,7 +338,7 @@ def create_entity_ref(entity):
     return entity_ref
 
 def load_file_from_url(url):
-    response = requests.get(url)
+    response = requests_session.get(url)
     if response.status_code == 200:
         return response.text
     return None
@@ -286,13 +356,12 @@ def extract_columns(column_names, line):
         ix += 1
     return row
 
-
-
 def load(id, bio_url_prefix = None, property_override_url_prefix = None, publications_url_prefix = None):
     entity = {}
-    wiki_entity = client.get(id, load=True)
+    wiki_entity = load_wikidata_entity(id)
+    _logger.info(colored(f'{id} - {wiki_entity['modified']}', 'green'))
     entity['id'] = id
-    entity['description'] = f'{wiki_entity.description}'
+    entity['description'] = find(wiki_entity, 'descriptions.en.value') or ''
     entity['label'] = label(wiki_entity)
     if bio_url_prefix:
         text = load_file_from_url(f'{bio_url_prefix}{id}.md')
@@ -302,8 +371,6 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
             entity['label'] = lines[0].strip().replace('# ', '')
             if lines[1].startswith('## '):
                 entity['description'] = lines[1].strip().replace('## ', '')
-
-
     if publications_url_prefix:
         text = load_file_from_url(f'{publications_url_prefix}{id}.tsv')
         if text:
@@ -313,7 +380,7 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
 
     entity['properties'] = load_claims(wiki_entity)
     if property_override_url_prefix:
-        response = requests.get(f'{property_override_url_prefix}{id}.json')
+        response = requests_session.get(f'{property_override_url_prefix}{id}.json')
         if response.status_code == 200:
             try:
                 props = response.json()
@@ -340,9 +407,7 @@ def load_ids(ids, bio_url_prefix = None, property_override_url_prefix= None, pub
 
 def load_sparql_results(sparql, bio_url_prefix = None, property_override_url_prefix= None, publications_url_prefix = None):
     params = {'query': sparql}
-    headers = wiki_bot_headers.copy()
-    headers['Accept'] = 'application/json'
-    response = requests.get(sparql_endpoint, params=params, headers=headers)
+    response = requests_session.get(sparql_endpoint, params=params, headers={'Accept':'application/json'})
     results = find(response.json(), 'results.bindings')
     for result in results:
         wikidata_uri = find(result, 'item.value')
@@ -354,7 +419,7 @@ def load_sparql_results(sparql, bio_url_prefix = None, property_override_url_pre
 
 def load_id_list(id_list_url):
     id_list = []
-    response = requests.get(id_list_url, headers=wiki_bot_headers)
+    response = requests_session.get(id_list_url)
     if response.status_code == 200:
         data = response.text
         for line in data.split('\n'):
@@ -378,6 +443,38 @@ def get_response_json(response):
             pass
     return None
 
+def extract_location_information():
+    location_information = {}
+    for f in os.listdir(data_path):
+        if (f.startswith('Q') and f.endswith('.json')):
+            with open(os.path.join(data_path, f)) as local_file:
+                local_json = json.load(local_file)
+            entity_id = local_json['id']
+            entity_name = local_json['label']
+            for item in local_json['properties'].values():
+                property_id = item['key']
+                property_name = find(item, 'property.label')
+                for value in [i for i in item['values'] if i.get('value-type') == 'wikibase-item']:
+                    value_id = value['id']
+                    value_name = value['text']
+                    for value_coordinate_property in value.get('data', {}).get('properties', {}).get('P625', {}).get('values', []):
+                        latitude = value_coordinate_property.get('latitude')
+                        longitude = value_coordinate_property.get('longitude')
+                        if latitude and longitude:
+                            location = location_information.get(value_id, {'label': value_name, 'entity_properties': [], 'lat': latitude, 'long': longitude})
+                            location_information[value_id] = location
+                            entity_properties = location['entity_properties']
+                            info = {
+                                'property_id': property_id,
+                                'property_name': property_name.title(),
+                                'entity_id': entity_id,
+                                'entity_name': entity_name
+                            }
+                            entity_properties.append(info)
+                            break
+    with open(os.path.join(data_path, 'location_information.json'), 'w') as location_file:
+        location_file.write(json.dumps(location_information, indent=4))
+
 def compare_with_site(site):
     changed_ids = []
     for f in os.listdir(data_path):
@@ -386,7 +483,7 @@ def compare_with_site(site):
                 local_json = json.load(local_file)
             remote_json = None
             item_changed = False
-            response = requests.get(f'{site}/data/{f}')
+            response = requests_session.get(f'{site}/data/{f}')
             remote_json = get_response_json(response)
             if remote_json:
                 for item in local_json['properties'].values():
@@ -447,7 +544,7 @@ def compare_with_site(site):
         local_json = json.load(local_file)
     remote_json = None
     item_changed = False
-    response = requests.get(f'{site}/data/{f}')
+    response = requests_session.get(f'{site}/data/{f}')
     if response.status_code == 200:
         remote_json = response.json()
     remote_item_map = {x['id']: x for x in remote_json}
@@ -469,7 +566,7 @@ def compare_with_site(site):
 
 
 def load_image_list(file):
-    response = requests.get(file)
+    response = requests_session.get(file)
     if response.status_code == 200:
         data = response.text
         for line in data.split('\n'):
@@ -484,7 +581,7 @@ def load_image_list(file):
 
 def load_properties_list(file):
     global allowed_properties
-    response = requests.get(file)
+    response = requests_session.get(file)
     if response.status_code == 200:
         data = response.text
         allowed_properties = []
@@ -501,7 +598,7 @@ def load_properties_list(file):
 
 
 def main():
-    global allowed_properties, allowed_images
+    global allowed_properties, allowed_images, disable_cache_check, use_image_cache, data_path, wiki_cache_path
     configure_logging('wikiloader.log')
     parser = argparse.ArgumentParser(description='Load wikidata')
     group = parser.add_mutually_exclusive_group(required=True)
@@ -510,13 +607,30 @@ def main():
     group.add_argument('--site-file', required=False, help='JSON file containing query and or SPARQL with site information')
     group.add_argument('--id-file', required=False, help='File with a list of entity ids')
     parser.add_argument('--append', action='store_true', help='Append to existing entities')
+    parser.add_argument('--no-cache-check', action='store_true', help='Disable cache check (always use the cached data)')
+    parser.add_argument('--disable-image-cache', action='store_true', help='Disable image cache')
     parser.add_argument('--compare-site', required=False, help='Site for comparing values')
+    parser.add_argument('--data-path', required=False, help=f'Path to react site data (default {data_path})')
+    parser.add_argument('--cache-path', required=False, help=f'Path to wikidata cache (default {wiki_cache_path})')
     args = parser.parse_args()
+
+    extract_location_information()
+    exit(0)
+
+    if args.data_path:
+        data_path = args.data_path
+    if args.cache_path:
+        wiki_cache_path = args.cache_path
+
+    disable_cache_check = args.no_cache_check
 
     if not args.append:
         for f in os.listdir(data_path):
             if f.startswith('Q') or f.endswith('.jpg') or f == f'entity_list.json':
                 os.remove(os.path.join(data_path, f))
+
+    if args.disable_image_cache:
+        use_image_cache = False
 
     if args.site_file:
         with open(args.site_file) as f:
@@ -554,6 +668,8 @@ def main():
         with open(args.sparql_file, 'r') as file:
             sparql = file.read()
         load_sparql_results(sparql)
+
+    extract_location_information()
 
     if args.compare_site:
         compare_with_site(args.compare_site)

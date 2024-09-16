@@ -31,6 +31,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
                 let centerLong = places?.[0]?.long || -72.92211258237327;
                 map.current = L.map(id, {
                     fullscreenControl: true,
+                    minZoom: 2,
                     fullscreenControlOptions: {
                         position: 'topleft'
                     }
@@ -48,6 +49,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass}) => 
                     } else {
                         x.bindTooltip(`<div class="map-tooltip"><strong>${place.label}:</strong><br />${place.value}</div>`);
                     }
+                    console.log(place.value)
                     points.push([place.lat, place.long]);
                 });
                 if (points.length > 1) {

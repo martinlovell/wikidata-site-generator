@@ -121,6 +121,24 @@ div.uv-wrapper {
     width: 100px;
 }
 
+#fullmap {
+    margin-top:20px;
+    .map-tooltip {
+        width: 350px;
+        font-size: 1.2em;
+    }
+    .map-tooltip strong {
+        font-size: 1.4em;
+    }
+    .map-property {
+        font-weight: bold;
+    }
+}
+
+.site-title {
+    font-size: 1.5em;
+}
+
 .markdown {
 
     table, td, th {
@@ -178,4 +196,14 @@ div.uv-wrapper {
     .info-icon {
         margin-top: -5px;
     }
+}
+
+.qual-label {
+    text-transform: capitalize;
+    font-style: italic;
+}
+
+#fullmap {
+    width: 100%;
+    aspect-ratio: 1.9;
 }

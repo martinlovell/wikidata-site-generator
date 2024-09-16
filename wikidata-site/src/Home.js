@@ -37,14 +37,14 @@ const EntityLink = ({id, description, label, properties, status}) => {
     if (dob || dod) additionalProperties.push(`${dob} - ${dod}`);
 
     return <div className={'card link-card' + (status && ` status-${status}` || '')} key={id}>
-                <Link to={link} className="stretched-link"></Link>
+                {status != 'new' && <Link to={link} className="stretched-link"></Link>}
                 {showImages(properties)}
                 <div className="card-body">
                     <h5 className="card-title">{label}</h5>
                     <p className="card-text">{description}</p>
                     {additionalProperties.map((p, index)=><p key={index} className="card-text">{p}</p>)}
                     {extractPropertyList(properties, 'P69')}
-                    <Link to={link} className="visually-hidden">View</Link>
+                    {status != 'new' && <Link to={link} className="visually-hidden">View</Link>}
                 </div>
            </div>
 }

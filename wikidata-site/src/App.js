@@ -9,6 +9,7 @@ import { Routes, Route } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import { useEffect, useState } from 'react';
+import FullMap from './FullMap';
 
 function App() {
   const [title, setTitle] = useState('')
@@ -36,6 +37,7 @@ function App() {
           <Route path="/" element={<Home />} base />
           <Route path="entity/:id" element={<WikidataEntity />} />
           <Route path="about" element={<About about={about} sparql={sparql}/>} />
+          <Route path="map" element={<FullMap />} />
           <Route path=":list/entity/:id" element={<WikidataEntity />} />
           <Route path=":json_file" element={<Home />} />
         </Routes>

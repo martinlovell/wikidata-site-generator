@@ -21,6 +21,7 @@ const specialProperties = ['P31', 'P21', 'P18', 'P6108', 'P10'];
 const startTime = 'P580';
 const endTime = 'P582';
 const pointInTime = 'P585';
+const kinship = 'P1039';
 
 
 const sortProperties = (props) => {
@@ -136,7 +137,11 @@ function dateQualifiers(properties) {
     const startProp = properties.find((property) => property.key === startTime);
     const endProp = properties.find((property) => property.key === endTime);
     const pointInTimeProp = properties.find((property) => property.key === pointInTime);
-    if (startProp || endProp) {
+    const kinshipProp = properties.find((property) => property.key === kinship)
+    if (kinshipProp) {
+        return <> &mdash; {kinshipProp['values'][0]['text']}</>
+
+    } else if (startProp || endProp) {
         const startValue = (startProp && formatWikiDateTime(startProp['values'][0]['text'])) || '';
         const endValue = (endProp && formatWikiDateTime(endProp['values'][0]['text'])) || '';
         const rangeStr = `${startValue} - ${endValue}`
@@ -150,12 +155,12 @@ function dateQualifiers(properties) {
 }
 
 function listQualifiers(properties, setHighlightedPlace, map) {
-    const specialProps = [startTime, endTime, pointInTime];
+    const specialProps = [startTime, endTime, pointInTime, kinship];
     return properties.map((property, index) => {
             if (specialProps.includes(property.key)) return;
             return (
                 <div key={index} className='row'>
-                    <div className='col-auto font-italic' key='label'>{property.property.label}:</div>
+                    <div className='col-auto qual-label' key='label'>{property.property.label}:</div>
                     {property.values.map((value, index) =>
                                 <div className='col-auto' key={index}><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map} /></div>
                     )}
@@ -234,6 +239,7 @@ const WikidataEntity = () => {
 
     if (entityData) {
         return <>
+            {entityData['status'] == 'new'}
             {entityData.biographyMarkdown ? <></> : <><h1 className={(entityData['labelStatus'] && ` status-${entityData['labelStatus']}` || '')}>{entityData.label}</h1>{entityData.description && <h2 className={(entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}` || '')}>{entityData.description}</h2>}</>}
             <UVViewer manifestProperties={entityData.properties['P6108']} />
             <VideoViewer videoProperties={entityData.properties['P10']} />
