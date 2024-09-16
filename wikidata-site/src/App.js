@@ -30,7 +30,7 @@ function App() {
       .catch(error => console.error(error));
   }, [basename]);
   return (
-    <div className='container-fluid' style={{minHeight: '100vh', position: 'relative'}}>
+    <div id='application' className='container-fluid' style={{minHeight: '100vh', position: 'relative'}}>
       <Header title={title}></Header>
       <div className='container' style={{paddingBottom:'150px'}}>
         <Routes>

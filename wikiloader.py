@@ -69,9 +69,14 @@ def load_wikidata_entity(id):
     if response.status_code == 200:
         response_json = response.json()
         downloaded_data = response_json.get('entities', {}).get(id, None)
+        if not downloaded_data:
+            v = response_json.get('entities', {}).values()
+            if len(v) > 0:
+                downloaded_data = v[0]
         _logger.debug(f'adding to cache {id}')
-        with gzip.open(cache_file, 'wt') as cf:
-            cf.write(json.dumps(downloaded_data))
+        if downloaded_data:
+            with gzip.open(cache_file, 'wt') as cf:
+                cf.write(json.dumps(downloaded_data))
         return downloaded_data
     elif response.status_code == 304:
         _logger.debug(f'using cache {id}')
