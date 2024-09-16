@@ -359,7 +359,7 @@ def extract_columns(column_names, line):
 def load(id, bio_url_prefix = None, property_override_url_prefix = None, publications_url_prefix = None):
     entity = {}
     wiki_entity = load_wikidata_entity(id)
-    _logger.info(colored(f'{id} - {wiki_entity['modified']}', 'green'))
+    _logger.info(colored(f'{id} - {wiki_entity["modified"]}', 'green'))
     entity['id'] = id
     entity['description'] = find(wiki_entity, 'descriptions.en.value') or ''
     entity['label'] = label(wiki_entity)
