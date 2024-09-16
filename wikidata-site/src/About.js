@@ -7,17 +7,17 @@ const About = ({about, sparql})  => {
         fetch(`${basename}/LATEST_VERSION.txt`)
         .then(response => response.text())
         .then(data => {
-            if (!data.indexOf('html')) {
+            if (data.indexOf('html') < 0) {
                 setLatestVersion(data)
             }
         })
-        .catch(error => {});
+        .catch(error => {console.error(error)});
     }, [basename]);
     return <>
         <h1>About</h1>
         <p>{about}</p>
         {sparql && <div><strong>SPARQL:</strong><pre>{sparql}</pre></div>}
-        {latestVersion && <div>Version: {latestVersion}</div>}
+        {latestVersion && <div><strong>Version Information</strong><pre>{latestVersion}</pre></div>}
     </>;
 }
 
