@@ -70,7 +70,7 @@ def load_wikidata_entity(id):
         response_json = response.json()
         downloaded_data = response_json.get('entities', {}).get(id, None)
         if not downloaded_data:
-            v = response_json.get('entities', {}).values()
+            v = list(response_json.get('entities', {}).values())
             if len(v) > 0:
                 downloaded_data = v[0]
         _logger.debug(f'adding to cache {id}')
