@@ -411,7 +411,7 @@ def load_ids(ids, bio_url_prefix = None, property_override_url_prefix= None, pub
         load(wikidata_id, bio_url_prefix, property_override_url_prefix, publications_url_prefix)
 
 def load_sparql_results(sparql, bio_url_prefix = None, property_override_url_prefix= None, publications_url_prefix = None):
-    params = {'query': sparql}
+    params = {'query': sparql.replace('[AUTO_LANGUAGE]', 'en')}
     response = requests_session.get(sparql_endpoint, params=params, headers={'Accept':'application/json'})
     results = find(response.json(), 'results.bindings')
     for result in results:
