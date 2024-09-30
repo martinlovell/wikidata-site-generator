@@ -1,0 +1,16 @@
+{
+    "archives at": "o:archivesAt",
+    "date of birth": "schema:birthDate",
+    "date of death": "schema:deathDate",
+    "educated at": "dbo:educationPlace",
+    "employer": "dbo:employer",
+    "family": "dbo:family",
+    "father": "dbo:father",
+    "mother": "dbo:mother",
+    "place of birth": "schema:birthPlace",
+    "relative": "foaf:relative",
+    "residence": "dbo:residence",
+    "sex or gender": "dbo:gender",
+    "sibling": "schema:sibling",
+    "spouse": "schema:spouse",
+    "work location": "schema:workLocation"}

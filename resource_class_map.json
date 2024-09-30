@@ -1,0 +1,7 @@
+{
+    "archives at": "dc:Location",
+    "educated at": "dbo:EducationalInstitution",
+    "employer": "dbo:Employer",
+    "place of birth": "dc:Location",
+    "residence": "dc:Location",
+    "work location": "dc:Location"}

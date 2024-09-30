@@ -3,3 +3,4 @@ Wikidata==0.8.1
 termcolor
 pillow
 dateparser
+markdown
