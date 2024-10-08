@@ -89,12 +89,21 @@ def lookup_entity_data(entity_id):
     data = {'label': label(entity)}
     if entity:
         claims = entity.get('claims', {})
+        instance_of_labels = []
+        for instance_of in claims.get('P31', []):
+            if find(instance_of, 'mainsnak.datatype') == 'wikibase-item':
+                inst = find(instance_of, 'mainsnak.datavalue.value.id')
+                if inst:
+                    inst = load_wikidata_entity(inst)
+                    instance_of_labels.append(label(inst))
+        data['instance_of'] = instance_of_labels
         filtered_claims = {}
         for key in [claim_key for claim_key in claims.keys() if claim_key in value_properties]:
             filtered_claims[key] = claims[key]
         if filtered_claims:
             additional_data = load_properties(None, filtered_claims, False)
             data['properties'] = additional_data
+
     else:
         _logger.error(f'No data for {entity_id}')
     return data
@@ -252,6 +261,7 @@ def load_properties(entity_id, entity, include_refs_and_quals = True):
     property_keys = entity.keys()
     if allowed_properties:
         property_keys = [p for p in property_keys if p in allowed_properties]
+
     for key in property_keys:
         property_data = {'key': key, 'property': entity_data[key], 'values': []}
         for value in entity[key]:

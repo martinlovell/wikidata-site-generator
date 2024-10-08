@@ -19,6 +19,7 @@ _logger = logging.getLogger(__name__)
 
 data_path = None
 resources = {}
+resources_by_itemid = {}
 
 
 def load_config_file(file_name):
@@ -27,7 +28,7 @@ def load_config_file(file_name):
 
 property_map = load_config_file('property_map.json')
 resource_class_map = load_config_file('resource_class_map.json')
-resource_class_precedence = ['dbo:EducationalInstitution', 'dbo:Employer', 'dc:Location']
+resource_class_precedence = ['schema:EducationalOrganization', 'schema:Organization', 'schema:Place']
 
 
 
@@ -51,7 +52,7 @@ def omeka_api_post(uri, params, object):
     if response.status_code == 200:
         return response.json()
     else:
-        _logger.error(response)
+        _logger.error(response.text)
 
 def omeka_api_put(uri, params, object):
     params['key_identity'] = OMEKA_KEY
@@ -60,7 +61,7 @@ def omeka_api_put(uri, params, object):
     if response.status_code == 200:
         return response.json()
     else:
-        _logger.error(response)
+        _logger.error(response.text)
 
 class property_ids_dict(dict):
     def __missing__(self, key):
@@ -118,6 +119,12 @@ def value_to_omeka_property(label, property_value):
         value =  value[1:5]
     resource_class = resource_class_map.get(label)
     if resource_class and property_value['value-type'] == 'wikibase-item':
+        if not resource_class == 'schema:EducationalOrganization':
+            # heristics to find universities by instance names
+            school_instance = [t for t in property_value['data']['instance_of'] if ('universit' in t or 'school' in t or 'college' in t) and not 'town' in t]
+            if school_instance:
+                resource_class = 'schema:EducationalOrganization'
+                _logger.info(f'Overriding resource type because of instanceof {school_instance} for {property_value["id"]}')
         existing_resource = resources.get(property_value['id'])
         if existing_resource:
             type = existing_resource['@type']
@@ -165,6 +172,7 @@ def save_resource(resource_id, resource):
         if not response:
             _logger.error('Unable to save resource')
             exit(2)
+    resources_by_itemid[f'{response['o:id']}'] = response
     return response
 
 
@@ -179,6 +187,8 @@ def load_data():
                 dt = {}
                 if 'biographyMarkdown' in entity_json:
                     dt['biography_html'] = markdown.markdown(entity_json['biographyMarkdown'])
+                if 'publications' in entity_json:
+                    dt['publications'] = markdown.markdown(entity_json['publications'])
 
                 dt['item'] = {
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
@@ -215,11 +225,46 @@ def load_data():
                                     _logger.error(f'Unable to find text in property {label}')
                                     exit(5)
 
+                add_properties_with_location_to_map(dt['item'])
                 omeka_item = save_resource(entity_json['id'], dt['item'])
                 item_id = omeka_item['o:id']
                 images = upload_images(item_id, dt)
                 create_or_update_page(item_id, dt, images)
                 _logger.info(f'Uploaded {entity_json["label"]}')
+
+def add_properties_with_location_to_map(item):
+    features = []
+    p_keys = list(property_map.values())
+    p_vals = list(property_map.keys())
+    for prop_key in [i for i in item.keys() if i in p_keys]:
+        values = [x for x in item[prop_key] if x['type'] == 'resource']
+        values = [resources_by_itemid[f'{x['value_resource_id']}'] for x in values]
+        for value in [v for v in values if 'o-module-mapping:feature' in v]:
+            feature = value['o-module-mapping:feature'][0].copy()
+
+            feature['o:id'] = value.get('o:id')
+            prop_name = p_vals[p_keys.index(prop_key)]
+
+            feature = {
+                '@type': feature['@type'],
+                'o-module-mapping:geography-type': feature['o-module-mapping:geography-type'],
+                'o-module-mapping:geography-coordinates': feature['o-module-mapping:geography-coordinates'],
+                'o:label': f'{prop_name.title()}:<br /> {value['o:title']}',
+                # 'o:id': value.get('o:id')
+                # 'o:item': {
+                #     "o:id": value.get('o:id')
+                # }
+            }
+
+
+            features.append(feature)
+
+    if features:
+        if len(features) > 1:
+            item['o-module-mapping:mapping'] = {'@type': 'o-module-mapping:Map'}
+        else:
+            item['o-module-mapping:mapping'] = {'@type': 'o-module-mapping:Map', 'o-module-mapping:bounds': get_bounding_box(features[0]['o-module-mapping:geography-coordinates'][0], features[0]['o-module-mapping:geography-coordinates'][1], 100)}
+        item['o-module-mapping:feature'] = features
 
 def resize_image(img):
     _logger.info(f'Resizing image {img}')
@@ -236,8 +281,8 @@ def upload_images(item_id, dt):
         temp_image = None
         img = None
         if image['url'].startswith('http'):
-            temp_image = 'temp.jpg'
-            img = temp_image
+            temp_image = image['name']
+            img = image['name']
             r = requests_session.get(image['url'], stream=True)
             if r.status_code == 200:
                 with open(img, 'wb') as f:
@@ -247,9 +292,8 @@ def upload_images(item_id, dt):
                 _logger.error(f'Unable to load remote image {r.status_code} {image['url']} {r.text}')
         else:
             img = os.path.join(data_path, os.path.basename(image['url']))
-        if os.path.getsize(img) > 3.5 * 1024 * 1024:
+        if os.path.getsize(img) > 1.5 * 1024 * 1024:
             resize_image(img)
-        _logger.info(f'image size: {os.path.getsize(img)}')
         images.append(upload_media_for_item(item_id, img)['o:id'])
         if temp_image:
             os.remove(temp_image)
@@ -260,21 +304,36 @@ def create_or_update_page(item_id, dt, images):
     page_data = {
         '@type': 'o:SitePage',
         'o:title': title,
-        'o:slug': f'page-{item_id}',
+        'o:slug': name_to_slug(title),
         'o:site': {'o:id': OMEKA_SITE},
         'o:block': [
-            {'o:layout': 'pageTitle', 'o:data': [], 'o:layout_data': {'grid_column_position': 'auto', 'grid_column_span': '12'}, 'o:attachment': []},
-            {'o:layout': 'html', 'o:data': {'html': dt['biography_html']}, 'o:layout_data': {'grid_column_position': 'auto', 'grid_column_span': '12'}, 'o:attachment': []},
+            {'o:layout': 'html', 'o:data': {'html': dt['biography_html']}, 'o:attachment': []},
             {
                 'o:layout': 'itemWithMetadata',
-                'o:layout_data': {'grid_column_position': 'auto', 'grid_column_span': '12'},
                 'o:attachment': [{'o:item': {'@id': f'http://localhost/api/items/{item_id}', 'o:id': item_id}}]
-            }]
+            },
+            {
+                "o:layout": "mappingMap",
+                "o:data": {
+                    "scroll_wheel_zoom": False,
+                },
+                "o:layout_data": {
+                    "grid_column_position": "auto",
+                    "grid_column_span": "12"
+                },
+                "o:attachment": [
+                    {
+                        "o:item": {
+                            "o:id": item_id
+                        }
+                    }]
+            }
+        ]
     }
 
     if images:
         for image in images:
-            page_data['o:block'].insert(1,
+            page_data['o:block'].insert(0,
                 {
                     'o:layout': 'media',
                     'o:data': { 'thumbnail_type': 'medium', 'show_title_option': 'item_title' },
@@ -287,12 +346,10 @@ def create_or_update_page(item_id, dt, images):
                     ]
                 }
             )
-    existing_page_id = page_ids[f'page-{item_id}']
+    existing_page_id = page_ids[name_to_slug(title)]
     if existing_page_id:
-        _logger.debug('Putting page')
         omeka_api_put(f'/site_pages/{existing_page_id}', {}, page_data)
     else:
-        _logger.debug('Posting page')
         omeka_api_post('/site_pages', {}, page_data)
 
 def get_bounding_box(latitude_in_degrees, longitude_in_degrees, half_side_in_miles):
