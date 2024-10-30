@@ -1,0 +1,13 @@
+{
+"schema:sameAs": "Same As",
+"schema:alumniOf": "Educated At",
+"schema:birthDate": "Birth Date",
+"schema:birthPlace": "Place of Birth",
+"schema:homeLocation": "Residence",
+"schema:gender": "Gender",
+"schema:deathDate": "Place of Death",
+"schema:worksFor": "Employed By",
+"schema:relatedTo": "Relative",
+"schema:memberOf": "Member Of",
+"schema:workLocation": "Work Location"
+}

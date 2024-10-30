@@ -42,8 +42,8 @@ const EntityLink = ({id, description, label, properties, status}) => {
                 <div className="card-body">
                     <h5 className="card-title">{label}</h5>
                     <p className="card-text">{description}</p>
-                    {additionalProperties.map((p, index)=><p key={index} className="card-text">{p}</p>)}
-                    {extractPropertyList(properties, 'P69')}
+                    {/* {additionalProperties.map((p, index)=><p key={index} className="card-text">{p}</p>)}
+                    {extractPropertyList(properties, 'P69')} */}
                     {status != 'removed' && <Link to={link} className="visually-hidden">View</Link>}
                 </div>
            </div>

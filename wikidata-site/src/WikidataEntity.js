@@ -249,6 +249,7 @@ const WikidataEntity = () => {
                 {
                     entityData['publications'] && listPublications(entityData['publications'], entityData['publicationsStatus'])
                 }
+                {entityData.publicationsMarkdown && <div className={'markdown'}><h2>Publications</h2><Markdown remarkPlugins={[remarkGfm]}>{entityData.publicationsMarkdown}</Markdown></div>}
                 {
                     listProperties(entityData.properties, setHighlightedPlace, map)
                 }

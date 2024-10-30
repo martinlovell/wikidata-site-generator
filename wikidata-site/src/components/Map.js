@@ -25,7 +25,7 @@ var primaryIcon = L.icon({
     popupAnchor: [0, -32]
 });
 
-const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon}) => {
+const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon, popups}) => {
     let map = useRef(null);
     if (refpass) {
         map = refpass;
@@ -53,7 +53,12 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon
                         x.bindPopup(`<div class="map-tooltip"><strong>${place.value}</strong></div>`)
                         x.openPopup();
                     } else {
-                        x.bindTooltip(`<div class="map-tooltip"><strong>${place.label}:</strong><br />${place.value}</div>`);
+                        if (popups) {
+                            x.bindPopup(`<div class="map-tooltip"><strong>${place.label}:</strong><br />${place.value}</div>`);
+                            x.bindTooltip(`<div class="map-tooltip"><strong>${place.label}</strong></div>`);
+                        } else {
+                            x.bindTooltip(`<div class="map-tooltip"><strong>${place.label}:</strong><br />${place.value}</div>`);
+                        }
                     }
                     console.log(place.value)
                     points.push([place.lat, place.long]);

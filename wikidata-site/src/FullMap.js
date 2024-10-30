@@ -16,10 +16,10 @@ const compareProperties = (a,b) => {
 const processLocations = (locations) => {
     let places = Object.values(locations);
     places = places.map((place) => {
-        place['value'] = '<ul>' + place.entity_properties.sort(compareProperties).map((p) => `<li><span class="map-property">${p.property_name}:</span> ${p.entity_name}</li>`).join('') + '</ul>';
+        console.log(place);
+        place['value'] = '<ul>' + place.entity_properties.sort(compareProperties).map((p) => `<li><span class="map-property">${p.property_name}:</span> <a href="entity/${p.entity_id}">${p.entity_name}</a></li>`).join('') + '</ul>';
         return place;
     })
-    console.log(places)
     return places;
 }
 
@@ -36,7 +36,7 @@ const FullMap = () => {
     if (locationInformation) {
         return (
             <div className='container-fluid'>
-                <Map places={processLocations(locationInformation)} id={'fullmap'} />
+                <Map places={processLocations(locationInformation)} id={'fullmap'} popups={true} />
             </div>)
     } else {
         return <div>Loading...</div>

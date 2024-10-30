@@ -11,6 +11,10 @@ $card-width: '250px';
     max-width: 80%;
 }
 
+.card-text {
+    font-size: 10pt;
+    line-height: normal;
+}
 footer {
     position: absolute;
     width: 100%;
@@ -41,7 +45,8 @@ footer {
 
 .link-card {
     width: 250px;
-    // height: 40rem;
+    height: 450px;
+    padding: 0;
     margin-bottom: 10px;
     margin-top: 10px;
 
@@ -123,9 +128,25 @@ div.uv-wrapper {
 
 #fullmap {
     margin-top:20px;
+    width: 100%;
+    aspect-ratio: 1.9;
     .map-tooltip {
-        width: 350px;
+        width: fit-content;
+
+        white-space: nowrap;
+        line-height: normal;
+
         font-size: 1.2em;
+    }
+    .leaflet-tooltip {
+        width: fit-content
+    }
+    .leaflet-popup {
+        width: 455px;
+        .map-tooltip {
+            width: 450px;
+            padding-right: 10px;
+        }
     }
     .map-tooltip strong {
         font-size: 1.4em;
@@ -204,6 +225,4 @@ div.uv-wrapper {
 }
 
 #fullmap {
-    width: 100%;
-    aspect-ratio: 1.9;
 }

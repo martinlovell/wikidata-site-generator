@@ -387,11 +387,9 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
             if lines[1].startswith('## '):
                 entity['description'] = lines[1].strip().replace('## ', '')
     if publications_url_prefix:
-        text = load_file_from_url(f'{publications_url_prefix}{id}.tsv')
+        text = load_file_from_url(f'{publications_url_prefix}{id}.md')
         if text:
-            publications = [extract_columns(['title', 'date', 'link', 'journal', 'role', 'authors'], line) for line in text.split('\n')]
-            if publications:
-                entity['publications'] = [p for p in publications if p]
+            entity['publicationsMarkdown'] = text
 
     entity['properties'] = load_claims(wiki_entity)
     if property_override_url_prefix:
