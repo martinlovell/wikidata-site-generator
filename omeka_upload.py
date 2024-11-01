@@ -177,6 +177,22 @@ def value_to_omeka_property(label, property_value):
     if property_value['value-type'] == 'time':
         value =  value[1:5]
     resource_class = resource_class_map.get(label)
+    relationship = property_map[label]
+    if relationship == 'schema:relatedTo':
+        if property_value['value-type'] == 'wikibase-item':
+            # this relies on the related item to have been previously loaded
+            relative =  load_item_by_wikidata_id(property_value['id'])
+            if relative:
+                prop =  {'type': 'resource', 'property_label': label.title(), 'value_resource_id': relative['o:id'], 'value_resource_name': 'items', 'display_title': property_value['text'], 'property_id': property_ids[property_map[label]]}
+                add_annotations(prop, label, property_value)
+                _logger.info('Adding relative')
+                return prop
+            else:
+                _logger.info('Skipping unknown relative')
+                return None
+
+
+
     if resource_class and property_value['value-type'] == 'wikibase-item':
         if not resource_class == 'schema:EducationalOrganization':
             # heristics to find universities by instance names
@@ -287,9 +303,11 @@ def load_data():
                 entity_json = json.load(entity_file)
                 dt = {}
                 if 'biographyMarkdown' in entity_json:
-                    dt['biography_html'] = markdown.markdown(entity_json['biographyMarkdown'])
+                    md = entity_json['biographyMarkdown']
+                    md = md.split('\n', 1)[1] if '\n' in md else md
+                    dt['biography_html'] = markdown.markdown(md).replace('h2>', 'h3>')
                 if 'publicationsMarkdown' in entity_json:
-                    dt['publications_html'] = f'<h2>Publications</h2>{markdown.markdown(entity_json['publicationsMarkdown'])}'
+                    dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json['publicationsMarkdown'])}'
 
                 dt['item'] = {
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
@@ -318,7 +336,9 @@ def load_data():
                         if 'values' in property:
                             for property_value in property['values']:
                                 if 'text' in property_value:
-                                    dt['item'][property_map[label]].append(value_to_omeka_property(label, property_value))
+                                    val = value_to_omeka_property(label, property_value)
+                                    if val:
+                                        dt['item'][property_map[label]].append(val)
                                 else:
                                     _logger.error(f'Unable to find text in property {label}')
                                     exit(5)
@@ -334,10 +354,10 @@ def load_data():
                     upload_html_for_item(item_id, 'Biography', dt['biography_html'])
                 if 'publications_html' in dt:
                     upload_html_for_item(item_id, 'Publications', dt['publications_html'])
-
-
-                images = upload_images(item_id, dt)
-                create_or_update_page(item_id, dt, images)
+                    _logger.info(f'Added publication to {entity_json['label']}')
+                upload_images(item_id, dt)
+                title = dt['item']['o:title'][0]['@value']
+                item_ids_by_slug[name_to_slug(title)] = item_id
                 _logger.info(f'Uploaded {entity_json["label"]}  {item_id}')
     create_full_map_page()
 
@@ -347,7 +367,7 @@ def add_properties_with_location_to_map(item):
     p_vals = list(property_map.keys())
     for prop_key in [i for i in item.keys() if i in p_keys]:
         values = [x for x in item[prop_key] if x['type'] == 'resource']
-        values = [resources_by_itemid[f'{x['value_resource_id']}'] for x in values]
+        values = [resources_by_itemid[f'{x['value_resource_id']}'] for x in values if f'{x['value_resource_id']}' in resources_by_itemid]
         for value in [v for v in values if f'o-module-mapping:{OMEKA_MAPPING_FEATURE}' in v]:
             original_feature = value[f'o-module-mapping:{OMEKA_MAPPING_FEATURE}'][0].copy()
             original_feature = omeka_api_get(f'/mapping_{OMEKA_MAPPING_FEATURE}s/{original_feature['o:id']}', {})
@@ -365,9 +385,6 @@ def add_properties_with_location_to_map(item):
             else:
                 feature['o-module-mapping:geography-coordinates'] = original_feature['o-module-mapping:geography-coordinates']
                 feature['o-module-mapping:geography-type'] = original_feature['o-module-mapping:geography-type']
-
-
-
             features.append(feature)
 
     if features:
@@ -416,67 +433,6 @@ def upload_images(item_id, dt):
         if temp_image:
             os.remove(temp_image)
     return images
-
-def create_or_update_page(item_id, dt, images):
-    title = dt['item']['o:title'][0]['@value']
-    item_ids_by_slug[name_to_slug(title)] = item_id
-    page_data = {
-        '@type': 'o:SitePage',
-        'o:title': title,
-        'dcterms:description': dt['item']['dcterms:description'],
-        'o:slug': name_to_slug(title),
-        'o:site': {'o:id': OMEKA_SITE},
-        'o:block': [
-            {'o:layout': 'html', 'o:data': {'html': dt['biography_html']}, 'o:attachment': []},
-            {
-                'o:layout': 'itemWithMetadata',
-                'o:attachment': [{'o:item': {'@id': f'{OMEKA_API}/items/{item_id}', 'o:id': item_id}}]
-            },
-            {
-                "o:layout": "mappingMap",
-                "o:data": {
-                    "scroll_wheel_zoom": False,
-                },
-                "o:layout_data": {
-                    "grid_column_position": "auto",
-                    "grid_column_span": "12"
-                },
-                "o:attachment": [
-                    {
-                        "o:item": {
-                            "o:id": item_id
-                        }
-                    }]
-            }
-        ]
-    }
-
-    if 'publications_html' in dt:
-        page_data['o:block'].insert(0,
-            {'o:layout': 'html', 'o:data': {'html': dt['publications_html']}, 'o:attachment': []})
-
-
-    if images:
-        for image in images:
-            page_data['o:block'].insert(0,
-                {
-                    'o:layout': 'media',
-                    'o:data': { 'thumbnail_type': 'medium', 'show_title_option': 'item_title', 'alignment': 'right' },
-                    'o:layout_data': {'alignment_block': 'right'},
-                    'o:attachment': [
-                        {
-                            'o:item': {'o:id': item_id},
-                            'o:media': {'o:id': image}
-                        }
-                    ]
-                }
-            )
-    existing_page_id = page_ids[name_to_slug(title)]
-    if existing_page_id:
-        omeka_api_put(f'/site_pages/{existing_page_id}', {}, page_data)
-    else:
-        print("new person page")
-        omeka_api_post('/site_pages', {}, page_data)
 
 def create_full_map_page():
     title = important_places_title
@@ -536,6 +492,33 @@ def load_descriptions():
                 student_json = json.load(file)
             description_by_label[student_json['label']] = student_json['description']
 
+def create_all_people():
+    pattern = r'Q\d+?\.json'
+    for f in os.listdir(data_path):
+        if re.match(pattern,f):
+            id = f.replace('.json', '')
+            if not load_item_by_wikidata_id(id):
+                item = {
+                    'schema:sameAs': [{ 'type': 'uri',
+                            '@id': f'https://www.wikidata.org/wiki/{id}',
+                            'o:label': 'Wikidata',
+                            'property_id': property_ids['schema:sameAs']
+                            }],
+                    'o:title': "Loading...",
+                    '@type': 'schema:Person',
+                    'o:resource_class': {'o:id':resource_class_ids['schema:Person']},
+                    'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
+                }
+                omeka_item = omeka_api_post('/items', {}, item)
+                _logger.info(f'Created item {id} with o:id {omeka_item['o:id']}')
+
+remove_punctuation = str.maketrans('', '', string.punctuation)
+def sort_name(person):
+    title = person['o:title']
+    parts = title.split(' ')
+    while (parts[-1].endswith('.')):
+        parts.pop()
+    return f'{parts[-1].translate(remove_punctuation)} {title}'
 
 def browse_page_html(site_data, omeka_site):
     html = '''<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
@@ -589,22 +572,23 @@ def browse_page_html(site_data, omeka_site):
     <div class='container-fluid'>
          <div class="row justify-content-center">
     '''
-    site_slug = omeka_site['o:slug']
-    for omeka_page in omeka_site['o:page']:
-        page = omeka_api_get(f'/site_pages/{omeka_page['o:id']}',{})
-        student = page['o:title']
-        slug = page['o:slug']
-        if 'constellations' in slug or slug == name_to_slug(important_places_title) or not slug in item_ids_by_slug:
-            continue
+
+    items = omeka_api_get(f'/items?item_set_id={OMEKA_ITEM_SET}&per_page=10000')
+    people = [p for p in items if 'schema:Person' in p['@type']]
+
+    people = sorted(people, key=sort_name)
+
+    for person in people:
+        student = person['o:title']
         image_urls = []
-        for block in page['o:block']:
-            if block['o:layout'] == 'media':
+        for media in person['o:media']:
+            media_data = omeka_api_get(f'/media/{media["o:id"]}')
+            if media_data['@type'] == 'o:Media':
                 try:
-                    media_id = block['o:attachment'][0]['o:media']['o:id']
-                    image_url = omeka_api_get(f'/media/{media_id}', {})['thumbnail_display_urls']['large']
+                    image_url = media_data['thumbnail_display_urls']['large']
                     image_urls.append(f'<img src="{image_url}" class="card-img-top card-image" alt="{student}">')
                 except:
-                    _logger.error(f"Unable to handle media: {block}")
+                    _logger.error(f"Unable to handle media: {media}")
 
         if len(image_urls) > 1:
             img_html = f'<div class="carousel-images"><div class="carousel" data-bs-ride="carousel">'
@@ -617,14 +601,17 @@ def browse_page_html(site_data, omeka_site):
             img_html = f'<div class="card-person-icon card-image"><svg xmlns="http://www.w3.org/2000/svg" width="250" height="330" fill="#ffffff" class="bi bi-person-fill" viewBox="1 1 14 14"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg></div>'
 
 
+        description = '';
+        if 'dcterms:description' in person:
+            description = person['dcterms:description'][0]['@value']
         html += f'''
         <div class="col-auto">
             <div class="card link-card" >
             <div class="card-body">
-                <a href="../item/{item_ids_by_slug[slug]}" class="stretched-link" title="{student}"></a>
+                <a href="../item/{person['o:id']}" class="stretched-link" title="{student}"></a>
                 {img_html}
                 <h5 class="card-title">{student}</h5>
-                <p class="card-text">{description_by_label.get(student,'')}</p>
+                <p class="card-text">{description}</p>
             </div>
             </div>
         </div>
@@ -642,7 +629,7 @@ def map_props_to_html(property_groups):
     for rel in property_groups.keys():
         html += f"<h5 class='map-h5'>{rel}:</h5>"
         for person in property_groups[rel]:
-            html += f'<a href=\'{name_to_slug(person)}\'>{person}</a><br />'
+            html += f'<a href=\'../item/{item_ids_by_slug[name_to_slug(person)]}\'>{person}</a><br />'
     return html
 
 
@@ -814,22 +801,25 @@ def update_site():
     home_page_id = response['o:id']
 
     existing_map_page = omeka_api_get('/site_pages', {'slug': 'constellations-map-page'})
-    page_data = {
-        '@type': 'o:SitePage',
-        'o:title': 'Custom Maps Page',
-        'o:slug': 'constellations-map-page',
-        'o:site': {'o:id': OMEKA_SITE},
-        'o:block': [
-            {'o:layout': 'html', 'o:data': {'html': maps_page_html()}, 'o:attachment': []},
-        ]
-    }
-    if existing_map_page:
-        page_data['o:id'] = existing_map_page[0]['o:id']
-        response = omeka_api_put(f'/site_pages/{existing_map_page[0]['o:id']}', {}, page_data)
+    if item_ids_by_slug:
+        page_data = {
+            '@type': 'o:SitePage',
+            'o:title': 'Custom Maps Page',
+            'o:slug': 'constellations-map-page',
+            'o:site': {'o:id': OMEKA_SITE},
+            'o:block': [
+                {'o:layout': 'html', 'o:data': {'html': maps_page_html()}, 'o:attachment': []},
+            ]
+        }
+        if existing_map_page:
+            page_data['o:id'] = existing_map_page[0]['o:id']
+            response = omeka_api_put(f'/site_pages/{existing_map_page[0]['o:id']}', {}, page_data)
+        else:
+            response = omeka_api_post('/site_pages', {}, page_data)
+        map_page_id = response['o:id']
     else:
-        response = omeka_api_post('/site_pages', {}, page_data)
-    map_page_id = response['o:id']
-
+        if existing_map_page:
+            map_page_id = existing_map_page[0]['o:id']
 
     important_places_page_id = omeka_api_get('/site_pages', {'slug': name_to_slug(important_places_title)})[0]['o:id']
 
@@ -951,7 +941,7 @@ def main():
         item_set = item_set[0]
     OMEKA_ITEM_SET = item_set['o:id']
     print(f"Using Site ID: {OMEKA_SITE}, and Item Set ID: {OMEKA_ITEM_SET}")
-    load_data()
+    # load_data()
     update_site()
 
 

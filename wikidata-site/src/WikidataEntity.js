@@ -244,7 +244,8 @@ const WikidataEntity = () => {
             <UVViewer manifestProperties={entityData.properties['P6108']} />
             <VideoViewer videoProperties={entityData.properties['P10']} />
             <div className='row'>
-                <div className='col-lg order-2 order-lg-1 properties-list mt-3'>
+                <div className='col-md mt-3'><div className='float-md-end'><PropertyInfo property={entityData.properties['P18']}/>{showImages(entityData.properties)}<Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map></div></div>
+                <div className='col-md properties-list mt-3'>
                 {entityData.biographyMarkdown && <div className={'markdown' + (entityData['biographyMarkdownStatus'] && ` status-${entityData['biographyMarkdownStatus']}` || '')}><Markdown remarkPlugins={[remarkGfm]}>{entityData.biographyMarkdown}</Markdown></div>}
                 {
                     entityData['publications'] && listPublications(entityData['publications'], entityData['publicationsStatus'])
@@ -254,7 +255,6 @@ const WikidataEntity = () => {
                     listProperties(entityData.properties, setHighlightedPlace, map)
                 }
                 </div>
-                <div className='col-lg order-1 order-lg-2 mt-3'><div className='float-lg-end'><PropertyInfo property={entityData.properties['P18']}/>{showImages(entityData.properties)}<Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map></div></div>
             </div>
         </>;
     } else {

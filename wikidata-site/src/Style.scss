@@ -5,6 +5,8 @@ $tooltip-max-width:                 350px;
 $tooltip-padding-y: 8px;
 $tooltip-padding-x: 8px;
 $tooltip-border-radius: 5px;
+$headercolor: #a2e1f7;
+$lt-bg: #ecf9fe;
 
 .tooltip {
     width: fit-content;
@@ -23,8 +25,6 @@ $tooltip-border-radius: 5px;
 
 body {
     font-family: "Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
-
-
     margin: 0;
     text-align: left;
     background-color: #fff;
@@ -35,10 +35,6 @@ body {
 }
 h1, h2, h3, h4, h5, h6 {
     font-family: "YaleNew",Georgia,"Times New Roman",serif
-}
-.bg-header {
-    background-color: $color!important;
-    color: #fff;
 }
 
 h3 {

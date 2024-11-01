@@ -20,7 +20,7 @@ export const showImages = (properties) => {
     } else if (properties['P18'] && properties['P18']['values'] && properties['P18']['values'].length === 1) {
         return <CommonsMedia value={properties['P18']['values'][0]} className={'wiki-image commons-image'}/>
     } else {
-        return <img className='wiki-image' src={imagePath('/card-image.svg')} alt='missing'/>
+        return <img className='wiki-image-nf' src={imagePath('assets/img-not-found.png')} alt='missing'/>
     }
 }
 

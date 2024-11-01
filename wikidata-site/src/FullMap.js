@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Map from "./components/Map";
 
 const compareProperties = (a,b) => {
@@ -17,16 +18,20 @@ const processLocations = (locations) => {
     let places = Object.values(locations);
     places = places.map((place) => {
         console.log(place);
-        place['value'] = '<ul>' + place.entity_properties.sort(compareProperties).map((p) => `<li><span class="map-property">${p.property_name}:</span> <a href="entity/${p.entity_id}">${p.entity_name}</a></li>`).join('') + '</ul>';
+        place['value'] = '<ul>' + place.entity_properties.sort(compareProperties).map((p) => `<li><span class="map-property">${p.property_name}:</span> <a href="#" onclick="onLinkClick('/entity/${p.entity_id}'); return false" >${p.entity_name}</a></li>`).join('') + '</ul>';
         return place;
     })
     return places;
 }
 
 const FullMap = () => {
+    const navigate = useNavigate();
     let [locationInformation, setLocationInformation] = useState()
     const basename = document.querySelector('base')?.getAttribute('href') ?? '/'
     useEffect(() => {
+        window.onLinkClick = (l) => {
+            navigate(l);
+        }
         fetch(`${basename}/data/location_information.json`)
             .then(response => response.json())
             .then(data => setLocationInformation(data))

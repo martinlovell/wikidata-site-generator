@@ -50,6 +50,16 @@ const EntityLink = ({id, description, label, properties, status}) => {
 }
 
 
+const entitySort = (a,b) => {
+    let aa = a.label.split(' ');
+    let bb = b.label.split(' ');
+    while (aa[aa.length-1].endsWith('.')) aa.pop();
+    while (bb[bb.length-1].endsWith('.')) bb.pop();
+    a = aa[aa.length-1] + a.label.replace(',','').replace('.','');
+    b = bb[bb.length-1] + b.label.replace(',','').replace('.','');
+    return (a > b) ? 1 : -1;
+}
+
 const Home = () => {
     let { json_file } = useParams();
     let [entityList, setEntityList] = useState(null);
@@ -66,7 +76,7 @@ const Home = () => {
             <div className='container-fluid'>
                 <div className="row justify-content-center">
                 {
-                    entityList.map((entityRef, index) => {
+                    entityList.sort(entitySort).map((entityRef, index) => {
                         return <div className="col-auto" key={index}><EntityLink {...entityRef} /></div>
                     })
                 }

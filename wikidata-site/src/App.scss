@@ -3,6 +3,10 @@
 
 $card-width: '250px';
 
+.nav-link, .nav-link:hover {
+    color: black;
+}
+
 .highlight {
     color: red;
 }
@@ -15,6 +19,18 @@ $card-width: '250px';
     font-size: 10pt;
     line-height: normal;
 }
+.bg-header {
+}
+
+.header {
+    background-color: $headercolor;
+    img {
+        width: 300px;
+        max-width: 80%;
+        margin-bottom: 20px;
+    }
+}
+
 footer {
     position: absolute;
     width: 100%;
@@ -30,6 +46,14 @@ footer {
     width: 248px;
     height: 337px;
     object-fit: cover;
+}
+
+.wiki-image-nf {
+    box-sizing: border-box;
+    width: 248px;
+    height: 337px;
+    object-fit: contain;
+    background-color: $lt-bg;
 }
 
 .carousel-images {
