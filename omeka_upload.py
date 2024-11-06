@@ -314,11 +314,11 @@ def load_data():
                     'o:site': [{'o:id': OMEKA_SITE}],
                     'o:resource_class': {'o:id':resource_class_ids['schema:Person']},
                     'o:title': [{'@value': entity_json['label'], 'type': 'literal', 'property_id': property_ids['dcterms:title']}],
-                    'foaf:name': [{'type': 'literal', '@value': entity_json['label'], 'property_id': property_ids['foaf:name']}],
-                    'dcterms:description': [{'type': 'literal', '@value': entity_json['description'], 'property_id': property_ids['dcterms:description']}]
+                    'foaf:name': [{'type': 'literal', '@value': entity_json['label'], 'property_id': property_ids['foaf:name']}]
                 }
-
-                description_by_label[entity_json['label']] = entity_json['description']
+                if 'description' in entity_json:
+                    dt['item']['dcterms:description'] = [{'type': 'literal', '@value': entity_json['description'], 'property_id': property_ids['dcterms:description']}]
+                    description_by_label[entity_json['label']] = entity_json.get('description')
                 for property in entity_json.get('properties', {}).values():
                     if property['key'] == 'P18':
                         if 'values' in property:
@@ -490,7 +490,7 @@ def load_descriptions():
         if re.match(pattern,f):
             with open(os.path.join(data_path, f)) as file:
                 student_json = json.load(file)
-            description_by_label[student_json['label']] = student_json['description']
+            description_by_label[student_json['label']] = student_json.get('description')
 
 def create_all_people():
     pattern = r'Q\d+?\.json'
@@ -941,7 +941,7 @@ def main():
         item_set = item_set[0]
     OMEKA_ITEM_SET = item_set['o:id']
     print(f"Using Site ID: {OMEKA_SITE}, and Item Set ID: {OMEKA_ITEM_SET}")
-    # load_data()
+    load_data()
     update_site()
 
 

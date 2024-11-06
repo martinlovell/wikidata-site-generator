@@ -97,6 +97,9 @@ def lookup_entity_data(entity_id):
                     inst = load_wikidata_entity(inst)
                     instance_of_labels.append(label(inst))
         data['instance_of'] = instance_of_labels
+        s = ' '.join(instance_of_labels)
+        if 'city' in s or 'town' in s or 'borough' in s or 'island' in s or 'county' in s or 'neighborhood' in s or 'state' in s:
+            data['label'] = ', '.join([data['label']] + enhanced_label_suffix(entity))
         filtered_claims = {}
         for key in [claim_key for claim_key in claims.keys() if claim_key in value_properties]:
             filtered_claims[key] = claims[key]
@@ -320,7 +323,38 @@ def label(entity):
         return None
     if entity['id'] in label_map:
         return label_map[entity['id']]
-    return find(entity, 'labels.en.value') or find(entity, 'representations.en.value')
+
+    lbl = find(entity, 'labels.en.value') or find(entity, 'representations.en.value')
+    return lbl
+
+def load_state(entity):
+    state = entity['claims'].get('P131')
+    if state:
+        state_id = find(state[0], 'mainsnak.datavalue.value.id')
+        state_entity = load_wikidata_entity(state_id)
+        state_label = label(state_entity)
+        if 'County' in state_label or 'Region' in state_label or 'Parish' in state_label or 'District' in state_label:
+            return load_state(state_entity)
+        else:
+            if state_label == 'United States of America':
+                state_label = 'US'
+            return state_label
+
+
+def enhanced_label_suffix(entity):
+    suffixes = []
+    state_label = load_state(entity)
+    if state_label:
+        suffixes.append(state_label)
+    country = entity['claims'].get('P17')
+    if country:
+        country_id = find(country[0], 'mainsnak.datavalue.value.id')
+        country_entity = load_wikidata_entity(country_id)
+        country_label = label(country_entity)
+        if country_label == 'United States of America':
+            country_label = 'US'
+        suffixes.append(country_label)
+    return list(dict.fromkeys(suffixes))
 
 def add_to_entity_file(entity):
     entity_ref = create_entity_ref(entity)
@@ -337,9 +371,10 @@ def add_to_entity_file(entity):
 def create_entity_ref(entity):
     entity_ref = {
         'id': entity['id'],
-        'description': entity['description'],
         'label': entity['label']
     }
+    if 'description' in entity:
+        entity_ref['description'] = entity['description']
     ref_properties = ['P569', 'P19', 'P570', 'P20', 'P18', 'P69']
     entity_ref['properties'] = {}
     for ref_property in ref_properties:
@@ -376,7 +411,6 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
     wiki_entity = load_wikidata_entity(id)
     _logger.info(colored(f'{id} - {wiki_entity["modified"]}', 'green'))
     entity['id'] = id
-    entity['description'] = find(wiki_entity, 'descriptions.en.value') or ''
     entity['label'] = label(wiki_entity)
     if bio_url_prefix:
         text = load_file_from_url(f'{bio_url_prefix}{id}.md')
@@ -386,6 +420,8 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
             entity['label'] = lines[0].strip().replace('# ', '')
             if lines[1].startswith('## '):
                 entity['description'] = lines[1].strip().replace('## ', '')
+            else:
+                _logger.info(f'Description not found: {id}')
     if publications_url_prefix:
         text = load_file_from_url(f'{publications_url_prefix}{id}.md')
         if text:
