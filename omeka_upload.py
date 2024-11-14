@@ -305,9 +305,11 @@ def load_data():
                 if 'biographyMarkdown' in entity_json:
                     md = entity_json['biographyMarkdown']
                     md = md.split('\n', 1)[1] if '\n' in md else md
-                    dt['biography_html'] = markdown.markdown(md).replace('h2>', 'h3>')
+                    dt['biography_html'] = markdown.markdown(md, extensions=['extra']).replace('h2>', 'h3>')
+                    if 'footnote' in dt['biography_html']:
+                        dt['biography_html'] = '<style>.footnote {font-size:0.9em} .footnote p {margin: 0}</style>' + dt['biography_html']
                 if 'publicationsMarkdown' in entity_json:
-                    dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json['publicationsMarkdown'])}'
+                    dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json['publicationsMarkdown'], extensions=['extra'])}'
 
                 dt['item'] = {
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],

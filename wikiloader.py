@@ -98,7 +98,7 @@ def lookup_entity_data(entity_id):
                     instance_of_labels.append(label(inst))
         data['instance_of'] = instance_of_labels
         s = ' '.join(instance_of_labels)
-        if 'city' in s or 'town' in s or 'borough' in s or 'island' in s or 'county' in s or 'neighborhood' in s or 'state' in s:
+        if 'city' in s or 'town' in s or 'borough' in s or 'island' in s or 'county' in s or 'neighborhood' in s or 'state' in s or 'place' in s:
             data['label'] = ', '.join(list(dict.fromkeys([data['label']] + enhanced_label_suffix(entity))))
         filtered_claims = {}
         for key in [claim_key for claim_key in claims.keys() if claim_key in value_properties]:
