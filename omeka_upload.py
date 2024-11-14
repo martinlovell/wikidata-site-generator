@@ -287,7 +287,7 @@ def save_resource(resource_id, resource):
         if not response:
             _logger.error('Unable to save resource')
             exit(2)
-    resources_by_itemid[f'{response['o:id']}'] = response
+    resources_by_itemid[f'{response["o:id"]}'] = response
     return response
 
 
