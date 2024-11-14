@@ -215,7 +215,7 @@ def value_to_omeka_property(label, property_value):
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
                     # 'o:site': [{'o:id': OMEKA_SITE}],
                     'dcterms:title': [{'@value': property_value['text'], 'type': 'literal', 'property_label': 'Title', 'property_id': property_ids['dcterms:title']}],
-                    'schema:sameAs': [{'type': 'uri', '@id': f'https://www.wikidata.org/wiki/{property_value['id']}', 'o:label': 'Wikidata', 'property_id': property_ids['schema:sameAs']}]
+                    'schema:sameAs': [{'type': 'uri', '@id': f'https://www.wikidata.org/wiki/{property_value["id"]}', 'o:label': 'Wikidata', 'property_id': property_ids['schema:sameAs']}]
             }
             resources[property_value['id']] = resource
             coordinates = property_value.get('data', {}).get('properties', {}).get('P625')
