@@ -283,7 +283,7 @@ def save_resource(resource_id, resource):
                     resource[f'o-module-mapping:{OMEKA_MAPPING_FEATURE}'][ix]['o:id'] = mf['o:id']
                     ix += 1
 
-        response = omeka_api_put(f'/items/{existing_item['o:id']}', {}, resource)
+        response = omeka_api_put(f'/items/{existing_item["o:id"]}', {}, resource)
         if not response:
             _logger.error('Unable to save resource')
             exit(2)
@@ -309,7 +309,7 @@ def load_data():
                     if 'footnote' in dt['biography_html']:
                         dt['biography_html'] = '<style>.footnote {font-size:0.9em} .footnote p {margin: 0}</style>' + dt['biography_html']
                 if 'publicationsMarkdown' in entity_json:
-                    dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json['publicationsMarkdown'], extensions=['extra'])}'
+                    dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json["publicationsMarkdown"], extensions=["extra"])}'
 
                 dt['item'] = {
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
@@ -345,7 +345,7 @@ def load_data():
                                     _logger.error(f'Unable to find text in property {label}')
                                     exit(5)
                 dt['item']['schema:sameAs'] = [{ 'type': 'uri',
-                        '@id': f'https://www.wikidata.org/wiki/{entity_json['id']}',
+                        '@id': f'https://www.wikidata.org/wiki/{entity_json["id"]}',
                         'o:label': 'Wikidata',
                         'property_id': property_ids['schema:sameAs']
                         }]
@@ -356,7 +356,7 @@ def load_data():
                     upload_html_for_item(item_id, 'Biography', dt['biography_html'])
                 if 'publications_html' in dt:
                     upload_html_for_item(item_id, 'Publications', dt['publications_html'])
-                    _logger.info(f'Added publication to {entity_json['label']}')
+                    _logger.info(f'Added publication to {entity_json["label"]}')
                 upload_images(item_id, dt)
                 title = dt['item']['o:title'][0]['@value']
                 item_ids_by_slug[name_to_slug(title)] = item_id
@@ -369,14 +369,14 @@ def add_properties_with_location_to_map(item):
     p_vals = list(property_map.keys())
     for prop_key in [i for i in item.keys() if i in p_keys]:
         values = [x for x in item[prop_key] if x['type'] == 'resource']
-        values = [resources_by_itemid[f'{x['value_resource_id']}'] for x in values if f'{x['value_resource_id']}' in resources_by_itemid]
+        values = [resources_by_itemid[f'{x["value_resource_id"]}'] for x in values if f'{x["value_resource_id"]}' in resources_by_itemid]
         for value in [v for v in values if f'o-module-mapping:{OMEKA_MAPPING_FEATURE}' in v]:
             original_feature = value[f'o-module-mapping:{OMEKA_MAPPING_FEATURE}'][0].copy()
-            original_feature = omeka_api_get(f'/mapping_{OMEKA_MAPPING_FEATURE}s/{original_feature['o:id']}', {})
+            original_feature = omeka_api_get(f'/mapping_{OMEKA_MAPPING_FEATURE}s/{original_feature["o:id"]}', {})
             prop_name = p_vals[p_keys.index(prop_key)]
             feature = {
-                'o:label': f'{prop_name.title()}: {value['o:title']}',
-                'o-module-mapping:label': f'{prop_name.title()}: {value['o:title']}'
+                'o:label': f'{prop_name.title()}: {value["o:title"]}',
+                'o-module-mapping:label': f'{prop_name.title()}: {value["o:title"]}'
             }
             if '@type' in original_feature:
                 feature['@type'] = original_feature['@type']
@@ -426,7 +426,7 @@ def upload_images(item_id, dt):
                     for chunk in r:
                         f.write(chunk)
             else:
-                _logger.error(f'Unable to load remote image {r.status_code} {image['url']} {r.text}')
+                _logger.error(f'Unable to load remote image {r.status_code} {image["url"]} {r.text}')
         else:
             img = os.path.join(data_path, os.path.basename(image['url']))
         if os.path.getsize(img) > 1.5 * 1024 * 1024:
@@ -512,7 +512,7 @@ def create_all_people():
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
                 }
                 omeka_item = omeka_api_post('/items', {}, item)
-                _logger.info(f'Created item {id} with o:id {omeka_item['o:id']}')
+                _logger.info(f'Created item {id} with o:id {omeka_item["o:id"]}')
 
 remove_punctuation = str.maketrans('', '', string.punctuation)
 def sort_name(person):
@@ -770,7 +770,7 @@ def update_site():
     existing_browse_page = omeka_api_get('/site_pages', {'slug': 'constellations-browse-page'})
     page_data = {
         '@type': 'o:SitePage',
-        'o:title': f'{site_data['title']} Browse',
+        'o:title': f'{site_data["title"]} Browse',
         'o:slug': 'constellations-browse-page',
         'o:site': {'o:id': OMEKA_SITE},
         'o:block': [
@@ -779,7 +779,7 @@ def update_site():
     }
     if existing_browse_page:
         page_data['o:id'] = existing_browse_page[0]['o:id']
-        response = omeka_api_put(f'/site_pages/{existing_browse_page[0]['o:id']}', {}, page_data)
+        response = omeka_api_put(f'/site_pages/{existing_browse_page[0]["o:id"]}', {}, page_data)
     else:
         response = omeka_api_post('/site_pages', {}, page_data)
     browse_page_id = response['o:id']
@@ -796,7 +796,7 @@ def update_site():
     }
     if existing_home_page:
         page_data['o:id'] = existing_home_page[0]['o:id']
-        response = omeka_api_put(f'/site_pages/{existing_home_page[0]['o:id']}', {}, page_data)
+        response = omeka_api_put(f'/site_pages/{existing_home_page[0]["o:id"]}', {}, page_data)
     else:
         print("new home page")
         response = omeka_api_post('/site_pages', {}, page_data)
@@ -815,7 +815,7 @@ def update_site():
         }
         if existing_map_page:
             page_data['o:id'] = existing_map_page[0]['o:id']
-            response = omeka_api_put(f'/site_pages/{existing_map_page[0]['o:id']}', {}, page_data)
+            response = omeka_api_put(f'/site_pages/{existing_map_page[0]["o:id"]}', {}, page_data)
         else:
             response = omeka_api_post('/site_pages', {}, page_data)
         map_page_id = response['o:id']
@@ -903,7 +903,7 @@ def update_property_labels():
             label = property_labels[prop]
             existing_property = omeka_api_get(f'/properties/{id}')
             if existing_property['o:label'] != label:
-                _logger.info(f'Updating {prop} ({id}) from {existing_property['o:label']} to {label}')
+                _logger.info(f'Updating {prop} ({id}) from {existing_property["o:label"]} to {label}')
                 existing_property['o:label'] = label
                 omeka_api_put(f'/properties/{id}', {}, existing_property)
             else:
