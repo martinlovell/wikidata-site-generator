@@ -205,7 +205,7 @@ def value_to_omeka_property(label, property_value):
             type = existing_resource['@type']
             if resource_class_precedence.index(resource_class) < resource_class_precedence.index(type):
                 existing_resource['o:resource_class'] = {'oid': resource_class_ids[resource_class]}
-                _logger.info(f'updating resource {property_value['id']} to {resource_class} from {type} as id {resource_class_ids[resource_class]}')
+                _logger.info(f'updating resource {property_value["id"]} to {resource_class} from {type} as id {resource_class_ids[resource_class]}')
             oid = save_resource(property_value['id'], existing_resource)['o:id']
         else: # new resource
             resource = {
