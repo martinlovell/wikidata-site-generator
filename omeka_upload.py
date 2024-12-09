@@ -127,7 +127,7 @@ def name_to_slug(name):
     return name.translate(str.maketrans('', '', string.punctuation)).lower().replace(' ', '_')
 
 def upload_media_for_item(item_id, citation, name, image_path):
-    object = { 'o:ingester': 'upload', 'file_index': 0, 'o:item': {'o:id': item_id}, 'o:source': citation, 'o:alt_text': f'{name} - {citation}'}
+    object = { 'o:ingester': 'upload', 'file_index': 0, 'o:item': {'o:id': item_id}, 'o:source': f'{name} - {citation}', 'o:alt_text': f'{name} - {citation}'}
     multipart_form_data = {'file[0]': (os.path.basename(image_path), open(image_path, 'rb'))}
     uri = f'/media?key_identity={OMEKA_KEY}&key_credential={OMEKA_CRED}'
     params = {'data': json.dumps(object)}
