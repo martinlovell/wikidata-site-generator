@@ -135,9 +135,6 @@ def upload_media_for_item(item_id, citation, name, image_path):
     if not response.status_code == 200:
         _logger.error(f'Error uploading {image_path}: {response.text}')
         exit(1)
-    if citation:
-        print(response.json())
-        exit(0)
     return response.json()
 
 
