@@ -126,8 +126,8 @@ item_ids_by_slug = {}
 def name_to_slug(name):
     return name.translate(str.maketrans('', '', string.punctuation)).lower().replace(' ', '_')
 
-def upload_media_for_item(item_id, image_path):
-    object = { 'o:ingester': 'upload', 'file_index': 0, 'o:item': {'o:id': item_id}}
+def upload_media_for_item(item_id, citation, name, image_path):
+    object = { 'o:ingester': 'upload', 'file_index': 0, 'o:item': {'o:id': item_id}, 'o:source': citation, 'o:alt_text': f'{name} - {citation}'}
     multipart_form_data = {'file[0]': (os.path.basename(image_path), open(image_path, 'rb'))}
     uri = f'/media?key_identity={OMEKA_KEY}&key_credential={OMEKA_CRED}'
     params = {'data': json.dumps(object)}
@@ -135,6 +135,9 @@ def upload_media_for_item(item_id, image_path):
     if not response.status_code == 200:
         _logger.error(f'Error uploading {image_path}: {response.text}')
         exit(1)
+    if citation:
+        print(response.json())
+        exit(0)
     return response.json()
 
 
@@ -164,7 +167,7 @@ def load_item_by_wikidata_id(wikidata_id):
     params = {
         'property[0][property]': 'schema:sameAs',
         'property[0][text]': f'https://www.wikidata.org/wiki/{wikidata_id}',
-        'property[0][type]': 'eq'    }
+        'property[0][type]': 'eq'}
     results = omeka_api_get('/items', params)
     if results:
         return results[0]
@@ -305,11 +308,16 @@ def load_data():
                 if 'biographyMarkdown' in entity_json:
                     md = entity_json['biographyMarkdown']
                     md = md.split('\n', 1)[1] if '\n' in md else md
+                    image_citations = re.findall("^Image citation:.*$", md, re.MULTILINE)
+                    if image_citations:
+                        md = re.sub("\nImage citation:.*$", "", md, flags=re.MULTILINE)
+                        dt['image_citations'] = image_citations
                     dt['biography_html'] = markdown.markdown(md, extensions=['extra']).replace('h2>', 'h3>')
                     if 'footnote' in dt['biography_html']:
                         dt['biography_html'] = '<style>.footnote {font-size:0.9em} .footnote p {margin: 0}</style>' + dt['biography_html']
                 if 'publicationsMarkdown' in entity_json:
                     dt['publications_html'] = f'<h3>Publications</h3>{markdown.markdown(entity_json["publicationsMarkdown"], extensions=["extra"])}'
+                dt['name'] = entity_json['label']
 
                 dt['item'] = {
                     'o:item_set': [{'o:id': OMEKA_ITEM_SET}],
@@ -414,6 +422,8 @@ def resize_image(img):
 
 def upload_images(item_id, dt):
     images = []
+    ix = 0
+    image_citations = dt.get('image_citations', [])
     for image in dt.get('images', []):
         temp_image = None
         img = None
@@ -431,7 +441,9 @@ def upload_images(item_id, dt):
             img = os.path.join(data_path, os.path.basename(image['url']))
         if os.path.getsize(img) > 1.5 * 1024 * 1024:
             resize_image(img)
-        images.append(upload_media_for_item(item_id, img)['o:id'])
+        citation = image_citations[ix] if len(image_citations) > ix else ''
+        images.append(upload_media_for_item(item_id, citation.replace("Image citation: ", ""), dt.get('name'), img)['o:id'])
+        ix += 1
         if temp_image:
             os.remove(temp_image)
     return images
