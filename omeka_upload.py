@@ -2,12 +2,14 @@ import os
 import re
 import json
 import markdown
+from bs4 import BeautifulSoup
 import requests
 import math
 import string
 import logging
 from PIL import Image
 from io import StringIO
+import shutil
 
 OMEKA_KEY=os.environ.get('OMEKA_KEY')
 OMEKA_CRED=os.environ.get('OMEKA_CRED')
@@ -139,6 +141,8 @@ def upload_media_for_item(item_id, citation, name, image_path):
 
 
 def upload_html_for_item(item_id, title, html):
+    soup = BeautifulSoup(html, features='html.parser')
+    txt = soup.get_text()
     object = { 'o:ingester': 'html', 'o:renderer': 'html', 'file_index': 0, 'o:item': {'o:id': item_id},
     "dcterms:title": [
         {
@@ -147,6 +151,15 @@ def upload_html_for_item(item_id, title, html):
         "property_label": "Title",
         "is_public": True,
         "@value": title
+        }
+    ],
+    "dcterms:description": [
+        {
+        "type": "literal",
+        "property_id": property_ids['dcterms:description'],
+        "property_label": "Description",
+        "is_public": True,
+        "@value": txt
         }
     ],
     'html': html}
@@ -301,7 +314,7 @@ def load_data():
             entity_file_name = os.path.join(data_path, f)
             with open(entity_file_name, 'r') as entity_file:
                 entity_json = json.load(entity_file)
-                dt = {}
+                dt = {'id': entity_json['id']}
                 if 'biographyMarkdown' in entity_json:
                     md = entity_json['biographyMarkdown']
                     md = md.split('\n', 1)[1] if '\n' in md else md
@@ -441,6 +454,10 @@ def upload_images(item_id, dt):
         citation = image_citations[ix] if len(image_citations) > ix else ''
         images.append(upload_media_for_item(item_id, citation.replace("Image citation: ", ""), dt.get('name'), img)['o:id'])
         ix += 1
+
+        shutil.copyfile(img, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'images', f'{id}.jpg'))
+
+
         if temp_image:
             os.remove(temp_image)
     return images

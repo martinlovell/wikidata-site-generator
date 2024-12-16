@@ -4,3 +4,4 @@ termcolor
 pillow
 dateparser
 markdown
+beautifulsoup4
