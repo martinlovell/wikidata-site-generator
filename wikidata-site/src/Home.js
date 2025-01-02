@@ -9,7 +9,7 @@ const Home = () => {
         <div className="row justify-content-center home-body">
             <div className='col-lg-8 hero'><img alt="home hero image" className='hero-img' src={imagePath('/assets/hero-1.png')} /></div>
             <div className='col-lg-4 home-text'>
-                <h1>Early Black Students at Yale</h1>
+                <h1><span className='subheader'>Shining Light on Truth:</span> Early Black Students at Yale</h1>
                 <h2>A project to identify and share research about early Black students at Yale, 1830 to 1940</h2>
                 <div className='search-link'>
                     <button className='btn-const' onClick={()=>navigate('/search/')}>
