@@ -6,7 +6,7 @@ import { List, MenuButton } from "react-bootstrap-icons"
 const Header = ({title, searchString}) =>
     <div className="row bg-header header">
         <div className="col-lg-6">
-            <Link to="/"><img alt="constellations" src={imagePath('/assets/header.png')} /></Link>
+            <Link to="/"><img alt="constellations" src={imagePath('/assets/header.png?1')} /></Link>
             <div className="dropdown d-inline-block d-md-none">
                 <Dropdown>
                     <Dropdown.Toggle><List /></Dropdown.Toggle>
