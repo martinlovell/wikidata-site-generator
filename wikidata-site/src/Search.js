@@ -67,7 +67,7 @@ function SearchResult({result}) {
                 <img src={imagePath(`/data/${result['id']}.jpg`)}
                     onError={({ currentTarget }) => {
                         currentTarget.onerror = null; // prevents looping
-                        currentTarget.src = "/assets/img-not-found.png";
+                        currentTarget.src = imagePath('/assets/img-not-found.png');
                     } } />
             </div>
             <div className="">
