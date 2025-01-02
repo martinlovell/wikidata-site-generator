@@ -14,10 +14,14 @@ const About = ({about, sparql})  => {
         .catch(error => {console.error(error)});
     }, [basename]);
     return <>
-        <div className='about-body'>
-            <h1>Shining Light on Truth: Early Black Lives at Yale, 1830-1940</h1>
-            <h2>About</h2>
-            <p>{about}</p>
+        <div className='row'>
+            <div className='col-lg-4 home-text'>
+                <h1><span className='subheader'>Shining Light on Truth:</span> Early Black Students at Yale</h1>
+                <h2>News about a project to identify and share research about early Black students at Yale, 1830 to 1940</h2>
+            </div>
+            <div className='col-lg-8 about-body'>
+                {about}
+            </div>
         </div>
         {latestVersion && <div><strong>Version Information</strong><pre>{latestVersion}</pre></div>}
     </>;

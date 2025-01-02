@@ -15,7 +15,7 @@ const News = () => {
     return <div className='container-fluid'>
         <div className="row justify-content-center home-body">
             <div className='col-lg-4 home-text'>
-                <h1>Early Black Students at Yale - News</h1>
+                <h1><span className='subheader'>Shining Light on Truth:</span> Early Black Students at Yale</h1>
                 <h2>News about a project to identify and share research about early Black students at Yale, 1830 to 1940</h2>
             </div>
             <div className='col-lg-8 news-items'>
