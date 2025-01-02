@@ -335,6 +335,9 @@ div.search-results .card .text {
     color: white;
     min-height: 100%;
     padding: 50px;
+    h1 {
+        font-size: 40px;
+    }
     h2 {
         font-size: 25px;
     }
@@ -342,6 +345,27 @@ div.search-results .card .text {
         text-align: center;
         margin-top: 40px;
     }
+}
+
+
+
+@media only screen and (max-width: 1200px) {
+
+    .home-text {
+        padding: 30px;
+        h1 {
+            margin-bottom: 20px;
+            font-size: 35px;
+        }
+        h2 {
+            font-size: 18px;
+        }
+        .search-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+    }
+
 }
 
 .hero {
