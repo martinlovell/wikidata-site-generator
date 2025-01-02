@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { BoxArrowUpRight, GeoAltFill, InfoCircleFill } from 'react-bootstrap-icons';
 import { formatWikiDateTime, showImages } from './Utilities';
 import UVViewer from './components/UV'
@@ -15,19 +15,19 @@ import PropertyInfo from './components/PropertyInfo';
 // P570 DOD   P20(place)
 // P18 image
 
-const propertyOrder = ['P18', 'P154', 'P569', 'P19', 'P570', 'P20', 'P69', 'P108'];
-const noNamePropeties = ['P18', 'P154'];
-const specialProperties = ['P31', 'P21', 'P18', 'P6108', 'P10'];
-const startTime = 'P580';
-const endTime = 'P582';
-const pointInTime = 'P585';
-const kinship = 'P1039';
+const propertyOrder = ['image', 'logo image', 'date of birth', 'place of birth', 'date of death', 'place of death', 'educated at', 'employer'];
+const noNamePropeties = ['image', 'logo image'];
+const specialProperties = ['instance of', 'sex or gender', 'image', 'IIIF manifest URL', 'video'];
+const startTime = 'start time';
+const endTime = 'end time';
+const pointInTime = 'point in time';
+const kinship = 'kinship to subject';
 
 
 const sortProperties = (props) => {
     props.sort((a,b)=> {
-        let aIndex = propertyOrder.indexOf(a.key)
-        let bIndex = propertyOrder.indexOf(b.key)
+        let aIndex = propertyOrder.indexOf(a.label)
+        let bIndex = propertyOrder.indexOf(b.label)
         aIndex = aIndex >= 0 ? aIndex : propertyOrder.length
         bIndex = bIndex >= 0 ? bIndex : propertyOrder.length
         // push external ids to the bottom of the list
@@ -42,8 +42,8 @@ const ExternalId = ({value}) => <>{value.text}</>
 
 const WikidataItem = ({value, setHighlightedPlace, map}) => {
     const additional_data = [];
-    if (value['data'] && value['data']['properties'] && value['data']['properties']['P625']) {
-        const pvalue = value['data']['properties']['P625']['values'][0]
+    if (value['data'] && value['data']['properties'] && value['data']['properties']['coordinate location']) {
+        const pvalue = value['data']['properties']['coordinate location']['values'][0]
         if (pvalue['value-type'] === 'globe-coordinate') {
             const long = pvalue['longitude'];
             const lat = pvalue['latitude'];
@@ -52,12 +52,12 @@ const WikidataItem = ({value, setHighlightedPlace, map}) => {
                 onMouseEnter={(e)=>{e.preventDefault(); setHighlightedPlace(`${value['text']}-${lat}-${long}`);}} target='_blank' rel="noreferrer" ><GeoAltFill className='info-icon'/></a>)
         }
     }
-    return <>{value['text']} {additional_data.map((d)=>d)}</>;
+    return <><Link to={`/search/"${value['text']}"`} >{value['text']}</Link> {additional_data.map((d)=>d)}</>;
 }
 
 const Time = ({value}) => {
     let time = value['text'];
-    return <>{formatWikiDateTime(time)}</>
+    return <><Link to={`/search/${formatWikiDateTime(time)}`} >{formatWikiDateTime(time)}</Link></>
 }
 
 const Url = ({value}) => {
@@ -103,41 +103,30 @@ const Publication = ({publication, ix}) => {
 
 function listPublications(publications, publicationsStatus) {
     if (publications)
-        return <div className={publicationsStatus && `status-${publicationsStatus}` || ''}><h3 className='property-name'>Publications</h3><div className='publications'>{publications.map((p, ix) => <Publication publication={p} ix={ix} />)}</div></div>
+        return <div className={publicationsStatus && `status-${publicationsStatus}` || ''}><div className='property-name'>Publications</div><div className='publications'>{publications.map((p, ix) => <Publication publication={p} ix={ix} />)}</div></div>
 }
 
 function listProperties(properties, setHighlightedPlace, map) {
-    return sortProperties(Object.values(properties)).filter((property) => !specialProperties.includes(property.key)).map((property, index) => {
-        return <div key={index} className={property['status'] && `status-${property['status']}` || ''}>{!noNamePropeties.includes(property.key) && <h3 className='property-name'>{property.property.label}</h3>}
+    return sortProperties(Object.values(properties)).filter((property) => !specialProperties.includes(property.label)).map((property, index) => {
+        return <div key={index} className={property['status'] && `status-${property['status']}` || ''}>{!noNamePropeties.includes(property.label) && <div className='property-name'>{property.label}</div>}
             <PropertyInfo property={property} />
             {property.values.map((value, index) =>
+                    // check for duplicates
                     <div className='property-values' key={index}>
-                        <div className='font-weight-bold'><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map}/>{dateQualifiers(value['qualifiers'])}
-                            {(value.references) &&
-                            <OverlayTrigger
-                                placement='right'
-                                overlay={
-                                    <Tooltip id={`tooltip-${index}`} className='bg-header'>
-                                        {value.references && <><strong className='section-label'>References</strong> {listReferences(value.references, setHighlightedPlace, map)}</>}
-                                    </Tooltip>
-                                }
-                            >
-                                <InfoCircleFill className='info-icon'/>
-                            </OverlayTrigger>}
+                        <div className='font-weight-bold'><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map}/>{showQualifiers(value['qualifiers'])}
                         </div>
-                        {value['qualifiers'] && <div className='qualifiers'>{listQualifiers(value['qualifiers'], setHighlightedPlace, map)}</div>}
                     </div>
             )}
         </div>;
     });
 }
 
-function dateQualifiers(properties) {
+function showQualifiers(properties) {
     if (!properties) return <></>;
-    const startProp = properties.find((property) => property.key === startTime);
-    const endProp = properties.find((property) => property.key === endTime);
-    const pointInTimeProp = properties.find((property) => property.key === pointInTime);
-    const kinshipProp = properties.find((property) => property.key === kinship)
+    const startProp = properties.find((property) => property.label === startTime);
+    const endProp = properties.find((property) => property.label === endTime);
+    const pointInTimeProp = properties.find((property) => property.label === pointInTime);
+    const kinshipProp = properties.find((property) => property.label === kinship)
     if (kinshipProp) {
         return <> &mdash; {kinshipProp['values'][0]['text']}</>
 
@@ -154,35 +143,6 @@ function dateQualifiers(properties) {
     }
 }
 
-function listQualifiers(properties, setHighlightedPlace, map) {
-    const specialProps = [startTime, endTime, pointInTime, kinship];
-    return properties.map((property, index) => {
-            if (specialProps.includes(property.key)) return;
-            return (
-                <div key={index} className='row'>
-                    <div className='col-auto qual-label' key='label'>{property.property.label}:</div>
-                    {property.values.map((value, index) =>
-                                <div className='col-auto' key={index}><PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map} /></div>
-                    )}
-                </div> );
-        })
-}
-
-
-function listReferences(references, setHighlightedPlace, map) {
-    const specialProps = [startTime, endTime, pointInTime];
-    return references.map( (properties) => properties.map((property, index) => {
-            if (specialProps.includes(property.key)) return <></>;
-            return (
-                <div key={index}>
-                    {property.values.map((value, index) =>
-                                <PropertyValue value={value} setHighlightedPlace={setHighlightedPlace} map={map}/>
-                    )}
-                </div> );
-        })
-    )
-}
-
 function extractPlaces(entityData) {
     if (!entityData) return;
     let primaryLocations = [];
@@ -190,7 +150,7 @@ function extractPlaces(entityData) {
         let value = property.values[0];
         const long = value['longitude'];
         const lat = value['latitude'];
-        let title = property.property.label;
+        let title = property.label;
         if (title === 'coordinate location') {
             title = entityData['label'];
         }
@@ -205,12 +165,12 @@ function extractPlaces(entityData) {
                         let value = property.values[0];
                         const long = value['longitude'];
                         const lat = value['latitude'];
-                        let title = property.property.label;
+                        let title = property.label;
                         let label = title;
                         let propValue = null;
                         if (title === 'coordinate location') {
-                            title = `${entityProperty.property.label}: ${entityValue?.data?.label}`;
-                            label = entityProperty.property.label;
+                            title = `${entityProperty.label}: ${entityValue?.data?.label}`;
+                            label = entityProperty.label;
                             propValue = entityValue?.data?.label;
                         }
                         primaryLocations.push({'lat': lat, 'long': long, 'title': title, 'label': label, 'value': propValue});
@@ -219,9 +179,14 @@ function extractPlaces(entityData) {
             })
         });
     }
-
-
     return primaryLocations;
+}
+
+const adjustData = (d) => {
+    if (d.biographyMarkdown) {
+        d.biographyMarkdown = d.biographyMarkdown.replace("##", "####")
+    }
+    return d;
 }
 
 const WikidataEntity = () => {
@@ -233,18 +198,18 @@ const WikidataEntity = () => {
     useEffect(() => {
         fetch(`${basename}/data/${id}.json`)
             .then(response => response.json())
-            .then(data => setEntityData(data))
+            .then(data => setEntityData(adjustData(data)))
             .catch(error => console.error(error));
     }, [id, basename]);
 
     if (entityData) {
         return <>
             {entityData['status'] == 'new'}
-            {entityData.biographyMarkdown ? <></> : <><h1 className={(entityData['labelStatus'] && ` status-${entityData['labelStatus']}` || '')}>{entityData.label}</h1>{entityData.description && <h2 className={(entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}` || '')}>{entityData.description}</h2>}</>}
-            <UVViewer manifestProperties={entityData.properties['P6108']} />
-            <VideoViewer videoProperties={entityData.properties['P10']} />
+            {entityData.biographyMarkdown ? <></> : <><h1 className={(entityData['labelStatus'] && ` status-${entityData['labelStatus']}` || '')}>{entityData.label}</h1>{entityData.description && <h4 className={(entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}` || '')}>{entityData.description}</h4>}</>}
             <div className='row'>
-                <div className='col-md mt-3'><div className='float-md-end'><PropertyInfo property={entityData.properties['P18']}/>{showImages(entityData.properties)}<Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map></div></div>
+                <div className='col-md mt-3'>
+                    {showImages(entityData.properties, 'w-100', 'wiki-image-nf-page')}
+                </div>
                 <div className='col-md properties-list mt-3'>
                 {entityData.biographyMarkdown && <div className={'markdown' + (entityData['biographyMarkdownStatus'] && ` status-${entityData['biographyMarkdownStatus']}` || '')}><Markdown remarkPlugins={[remarkGfm]}>{entityData.biographyMarkdown}</Markdown></div>}
                 {
@@ -254,8 +219,23 @@ const WikidataEntity = () => {
                 {
                     listProperties(entityData.properties, setHighlightedPlace, map)
                 }
+                <div className='property-name'>Important Places</div>
+                <Map id='places' refpass={map} className={'map-view'} highlightedPlace={highlightedPlace} places={extractPlaces(entityData)}></Map>
+                <div key='links' >
+                    <div className='property-name'>Links</div>
+                        <div className='property-values' key={'links'}>
+                            <div className='font-weight-bold'>
+                                <a href={`https://www.wikidata.org/wiki/${id}`} target='_blank'>View Wikidata</a>
+                            </div>
+                            <div className='font-weight-bold'>
+                                <a href={`/data/${id}.json`} target='_blank'>View Exhibit Data</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+
         </>;
     } else {
         return <h1>Loading</h1>;

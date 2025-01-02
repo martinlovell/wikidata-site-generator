@@ -1,51 +1,35 @@
 import { Link } from "react-router-dom"
 import { imagePath } from "./Utilities"
+import { Button, Dropdown, DropdownButton, DropdownMenu, DropdownToggle } from "react-bootstrap"
+import { List, MenuButton } from "react-bootstrap-icons"
 
-const Header = ({title}) =>
-    <div className="row bg-header">
-        <div className="col-12 header">
-        <Link className="navbar-brand mr-auto text-font-family text-decoration-none" to="/"><img alt="constellations" src={imagePath('/assets/header.png')} /></Link>
+const Header = ({title, searchString}) =>
+    <div className="row bg-header header">
+        <div className="col-lg-6">
+            <Link to="/"><img alt="constellations" src={imagePath('/assets/header.png')} /></Link>
+            <div className="dropdown d-inline-block d-md-none">
+                <Dropdown>
+                    <Dropdown.Toggle><List /></Dropdown.Toggle>
+                    <Dropdown.Menu>
+                        <Dropdown.Item><Link to="/">Home</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to="/people">People</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to="/map">Places</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to="/about">About</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to="/news">News</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to="/about">Contact Us</Link></Dropdown.Item>
+                        <Dropdown.Item><Link to={`/search/${searchString}`}>Search</Link></Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </div>
         </div>
-        <div className="col-12">
-            <nav aria-label="primary">
-                <div className="navbar navbar-expand-md navbar-dark">
-
-                    <div className="collapse navbar-collapse" id="navbarMainNav">
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item">
-                                <Link className="nav-link text-decoration-none small" to="/">People</Link>
-                            </li>
-                        </ul>
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item">
-                                <Link className="nav-link text-decoration-none small" to="/map">Places</Link>
-                            </li>
-                        </ul>
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item">
-                                <Link className="nav-link text-decoration-none small" to="/about">About</Link>
-                            </li>
-                        </ul>
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item">
-                                <Link className="nav-link text-decoration-none small" to="/news">News</Link>
-                            </li>
-                        </ul>
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item">
-                                <Link className="nav-link text-decoration-none small" to="/search">Advanced Search</Link>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="collapse navbar-collapse justify-content-end" id="navbarMainNav">
-                        <ul className="navbar-nav ml-md-2">
-                            <li className="nav-item me-auto">
-                                <Link className="nav-link text-decoration-none small" to="/about">Contact Us</Link>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
+        <div className="col-lg-6 mt-lg-3 text-center text-lg-end d-none d-md-block">
+            <Link to="/">Home</Link>
+            <Link to="/people">People</Link>
+            <Link to="/map">Places</Link>
+            <Link to="/about">About</Link>
+            <Link to="/news">News</Link>
+            <Link to="/about">Contact Us</Link>
+            <Link to={`/search/${searchString}`}>Search</Link>
         </div>
     </div>
 

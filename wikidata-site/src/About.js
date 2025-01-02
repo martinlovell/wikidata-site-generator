@@ -14,9 +14,11 @@ const About = ({about, sparql})  => {
         .catch(error => {console.error(error)});
     }, [basename]);
     return <>
-        <h1>About</h1>
-        <p>{about}</p>
-        {sparql && <div><strong>SPARQL:</strong><pre>{sparql}</pre></div>}
+        <div className='about-body'>
+            <h1>Shining Light on Truth: Early Black Lives at Yale, 1830-1940</h1>
+            <h2>About</h2>
+            <p>{about}</p>
+        </div>
         {latestVersion && <div><strong>Version Information</strong><pre>{latestVersion}</pre></div>}
     </>;
 }

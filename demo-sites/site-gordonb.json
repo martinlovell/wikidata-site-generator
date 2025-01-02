@@ -1,6 +1,0 @@
-{
-    "title": "Gordon Bunshaft, Architect",
-    "about": "Generated site: Entities with Gordon Bunshaft as Architect",
-    "sparql" : "SELECT DISTINCT ?item ?itemLabel WHERE {\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"[AUTO_LANGUAGE]\". }\n  {\n    SELECT DISTINCT ?item WHERE {\n      ?item p:P84 ?statement0.\n      ?statement0 (ps:P84/(wdt:P279*)) wd:Q333581.\n    }\n    LIMIT 100\n  }\n}",
-    "copyright": "Yale University"
-}

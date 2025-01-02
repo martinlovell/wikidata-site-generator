@@ -5,8 +5,11 @@ $tooltip-max-width:                 350px;
 $tooltip-padding-y: 8px;
 $tooltip-padding-x: 8px;
 $tooltip-border-radius: 5px;
-$headercolor: #a2e1f7;
+$headercolor: #ffffff;
 $lt-bg: #ecf9fe;
+$const-bg:#1c3867;
+$link-color: #b65627;
+$box-border-width: 5px;
 
 .tooltip {
     width: fit-content;
@@ -24,32 +27,126 @@ $lt-bg: #ecf9fe;
 }
 
 body {
-    font-family: "Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
+    font-family: "halyard-text","Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
     margin: 0;
     text-align: left;
     background-color: #fff;
     font-size: 1.125rem;
-    font-family: "Mallory", "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-    font-weight: 400;
     line-height: 1.6;
 }
-h1, h2, h3, h4, h5, h6 {
-    font-family: "YaleNew",Georgia,"Times New Roman",serif
+h1, h4 {
+    font-family: "freight-display-pro", "YaleNew",Georgia,"Times New Roman",serif
+}
+h2, h3, h5, h6 {
+    font-family: "halyard-text","Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
 }
 
+h1 {
+    font-size: 50px;
+    margin-bottom: 70px;
+}
+h2 {
+    font-size: 40px;
+}
 h3 {
-    color: $color;
+    font-size: 35px;
 }
-.text-font-family {
-    font-family: "YaleNew",Georgia,"Times New Roman",serif!important
+h4 {
+    font-size: 25px;
+    margin-bottom: 30px;
+}
+h5 {
+    font-size: 20px;
+}
+h6 {
+    font-size: 15px;
 }
 
+@media only screen and (max-width: 1023px) {
+    h1 {
+        font-size: 35px;
+        margin-bottom: 20px;
+    }
+    h2 {
+        font-size: 25px;
+    }
+    h3 {
+        font-size: 20px;
+    }
+    h4 {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+    h5 {
+        font-size: 15px;
+    }
+    h6 {
+        font-size: 13px;
+    }
+}
+
+
+
+.text-font-family {
+    font-family: "freight-display-pro", "YaleNew",Georgia,"Times New Roman",serif !important
+}
 .properties-list {
     margin-bottom: 5rem;
 }
 
 .property-name {
+    font-family: "halyard-text","Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
+    font-weight: bold;
     text-transform: capitalize;
     margin-top: 1rem;
     margin-bottom: 0;
+}
+
+a {
+    color: $link-color;
+}
+
+.btn-const {
+  background-color: white;
+  padding: 5px 20px;
+  border-radius: 5px;
+  border-width: 1px;
+  border: solid $link-color;
+  position: relative;
+  padding-right: 30px;
+  font-weight: bold;
+  font-family: "halyard-text","Mallory","Gill Sans","Gill Sans MT",Calibri,sans-serif;
+  svg {
+    color: $link-color;
+    height: 35px;
+    width: 35px;
+    position: absolute;
+    right: -22px;
+    top: 1px;
+    circle {
+        fill: $link-color;
+    }
+    path {
+        stroke: white;
+    }
+  }
+}
+.btn-const:hover {
+    color: white;
+    background-color: $link-color;
+    svg {
+      circle {
+          fill: white;
+          stroke: $link-color;
+      }
+      path {
+          stroke: $link-color;
+      }
+    }
+}
+
+.btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary.show {
+    color: $const-bg;
+    background-color: transparent;
+    border: 0;
 }

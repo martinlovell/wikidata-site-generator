@@ -170,7 +170,6 @@ def upload_html_for_item(item_id, title, html):
     if not response.status_code == 200:
         _logger.error(f'Error uploading {title}: {response.text}')
         exit(1)
-    print(f'update html response {title}')
     return response.json()
 
 def load_item_by_wikidata_id(wikidata_id):
@@ -198,21 +197,28 @@ def value_to_omeka_property(label, property_value):
             if relative:
                 prop =  {'type': 'resource', 'property_label': label.title(), 'value_resource_id': relative['o:id'], 'value_resource_name': 'items', 'display_title': property_value['text'], 'property_id': property_ids[property_map[label]]}
                 add_annotations(prop, label, property_value)
-                _logger.info('Adding relative')
                 return prop
             else:
-                _logger.info('Skipping unknown relative')
+                _logger.info(f'Skipping unknown relative {property_value["id"]}')
                 return None
 
 
 
     if resource_class and property_value['value-type'] == 'wikibase-item':
+        t = value.lower()
+        if not resource_class == 'schema:EducationalOrganization' and (('universit' in t or 'school' in t or 'college' in t or 'seminary' in t) and not 'town' in t):
+            _logger.debug(f'Marking as EducationalOrg for {value}')
+            resource_class = 'schema:EducationalOrganization'
         if not resource_class == 'schema:EducationalOrganization':
             # heristics to find universities by instance names
-            school_instance = [t for t in property_value['data']['instance_of'] if ('universit' in t or 'school' in t or 'college' in t) and not 'town' in t]
+            school_instance = [t for t in property_value['data']['instance_of'] if ('universit' in t or 'school' in t or 'college' in t or 'seminary' in t) and not 'town' in t]
             if school_instance:
                 resource_class = 'schema:EducationalOrganization'
-                _logger.info(f'Overriding resource type because of instanceof {school_instance} for {property_value["id"]}')
+                _logger.info(f'Overriding resource type because {value} is instanceof {school_instance} for {property_value["id"]}')
+        if resource_class == 'schema:Organization':
+            _logger.info(f'Skipping organization: {value}')
+            return None
+
         existing_resource = resources.get(property_value['id'])
         if existing_resource:
             type = existing_resource['@type']
@@ -260,11 +266,10 @@ def add_annotations(prop, label, property_value):
     title_annotation = property_annotation_map.get(label)
     if label == 'relative' and 'qualifiers' in property_value:
         for qualifier in property_value['qualifiers']:
-            if qualifier['key'] == 'P1039' and qualifier.get('values'): #kinship to subject
+            if qualifier['label'] == 'kinship to subject' and qualifier.get('values'):
                 title_annotation = qualifier['values'][0].get('text')
     if title_annotation:
         title_annotation = title_annotation.title()
-        print(f'Adding annotation: {title_annotation}')
         prop['@annotation'] = {
             'dcterms:type': [
                 {
@@ -340,7 +345,7 @@ def load_data():
                     dt['item']['dcterms:description'] = [{'type': 'literal', '@value': entity_json['description'], 'property_id': property_ids['dcterms:description']}]
                     description_by_label[entity_json['label']] = entity_json.get('description')
                 for property in entity_json.get('properties', {}).values():
-                    if property['key'] == 'P18':
+                    if property['label'] == 'image':
                         if 'values' in property:
                             for property_value in property['values']:
                                 if property_value.get('value-type') == 'commonsMedia':
@@ -350,7 +355,7 @@ def load_data():
                                                 dt['images'] = []
                                             dt['images'].append({'url': image_info['url'], 'name': property_value['name']})
                     else:
-                        label = property['property']['label']
+                        label = property['label']
                         pnames.add(label)
                         dt['item'][property_map[label]] = []
                         if 'values' in property:
@@ -374,11 +379,11 @@ def load_data():
                     upload_html_for_item(item_id, 'Biography', dt['biography_html'])
                 if 'publications_html' in dt:
                     upload_html_for_item(item_id, 'Publications', dt['publications_html'])
-                    _logger.info(f'Added publication to {entity_json["label"]}')
+                    #_logger.info(f'Added publication to {entity_json["label"]}')
                 upload_images(item_id, dt)
                 title = dt['item']['o:title'][0]['@value']
                 item_ids_by_slug[name_to_slug(title)] = item_id
-                _logger.info(f'Uploaded {entity_json["label"]}  {item_id}')
+                #_logger.info(f'Uploaded {entity_json["label"]}  {item_id}')
     create_full_map_page()
 
 def add_properties_with_location_to_map(item):
@@ -494,7 +499,6 @@ def create_full_map_page():
     if existing_page_id:
         omeka_api_put(f'/site_pages/{existing_page_id}', {}, page_data)
     else:
-        print("new map page")
         omeka_api_post('/site_pages', {}, page_data)
 
     pass
@@ -638,7 +642,7 @@ def browse_page_html(site_data, omeka_site):
             <div class="card-body">
                 <a href="../item/{person['o:id']}" class="stretched-link" title="{student}"></a>
                 {img_html}
-                <h5 class="card-title">{student}</h5>
+                <h4 class="card-title">{student}</h4>
                 <p class="card-text">{description}</p>
             </div>
             </div>
@@ -824,7 +828,6 @@ def update_site():
         page_data['o:id'] = existing_home_page[0]['o:id']
         response = omeka_api_put(f'/site_pages/{existing_home_page[0]["o:id"]}', {}, page_data)
     else:
-        print("new home page")
         response = omeka_api_post('/site_pages', {}, page_data)
     home_page_id = response['o:id']
 

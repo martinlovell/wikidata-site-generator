@@ -7,20 +7,11 @@ const basename = document.querySelector('base')?.getAttribute('href') ?? '/';
 
 export const imagePath = (path) => path.startsWith('/') ? `${basename}${path}` : path;
 
-export const showImages = (properties) => {
-    if (properties['P18'] && properties['P18']['values'] && properties['P18']['values'].length > 1) {
-        return <div className='carousel-images'>
-            <Carousel>
-            {properties['P18']['values'].map((value, index) => {
-                if (value['value-type'] === 'commonsMedia') return <Carousel.Item key={index}><CommonsMedia value={value} className={"wiki-image"}/></Carousel.Item>
-                else return <></>
-            })}
-            </Carousel>
-        </div>
-    } else if (properties['P18'] && properties['P18']['values'] && properties['P18']['values'].length === 1) {
-        return <CommonsMedia value={properties['P18']['values'][0]} className={'wiki-image commons-image'}/>
+export const showImages = (properties, classNames, nfClassNames) => {
+    if (properties['image'] && properties['image']['values'] && properties['image']['values'].length > 0) {
+        return <CommonsMedia value={properties['image']['values'][0]} className={classNames}/>
     } else {
-        return <img className='wiki-image-nf' src={imagePath('/assets/img-not-found.png')} alt='missing'/>
+        return <img className={nfClassNames || 'wiki-image-nf'} src={imagePath('/assets/img-not-found.png')} alt='missing'/>
     }
 }
 
@@ -30,9 +21,6 @@ export const formatWikiDateTime = (time) => {
         const date = new Date(time);
         if (date) {
             let dateStr = format(date, 'yyyy');
-            if (dateStr.startsWith('01/01/')) {
-                dateStr = dateStr.replace('01/01/', '');
-            }
             return dateStr;
         }
     } catch (e) {

@@ -60,7 +60,6 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon
                             x.bindTooltip(`<div class="map-tooltip"><strong>${place.label}:</strong><br />${place.value}</div>`);
                         }
                     }
-                    console.log(place.value)
                     points.push([place.lat, place.long]);
                 });
                 if (points.length > 1) {

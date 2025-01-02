@@ -1,4 +1,6 @@
 
+@import "https://use.typekit.net/gny4vcq.css";
+
 @import "./Style.scss";
 
 $card-width: '250px';
@@ -23,18 +25,35 @@ $card-width: '250px';
 }
 
 .header {
+    font-family: "halyard-display";
     background-color: $headercolor;
+    padding: 0 18px;
     img {
-        width: 300px;
+        margin-top: 20px;
+        width: 500px;
         max-width: 80%;
         margin-bottom: 20px;
+        cursor: pointer;
+    }
+    a {
+        text-decoration: none;
+        color: black;
+        font-size: 20px;
+        margin: 0 10px 0 0;
+        text-wrap: nowrap;
+    }
+    .menu {
+        margin-top: 35px;
+        a {
+            margin-left: 15px;
+        }
     }
 }
 
 footer {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
+    // position: absolute;
+    // width: 100%;
+    // bottom: 0;
 }
 
 .qualifiers {
@@ -43,17 +62,28 @@ footer {
 
 .wiki-image {
     box-sizing: border-box;
-    width: 248px;
+    width: 250px;
     height: 337px;
     object-fit: cover;
 }
 
 .wiki-image-nf {
     box-sizing: border-box;
-    width: 248px;
+    width: 250px;
     height: 337px;
     object-fit: contain;
     background-color: $lt-bg;
+}
+
+.wiki-image-nf-page {
+    width: 100%;
+    background-color: $lt-bg;
+}
+
+.properties-list {
+    a {
+        text-decoration: none !important;
+    }
 }
 
 .carousel-images {
@@ -73,6 +103,8 @@ footer {
     padding: 0;
     margin-bottom: 10px;
     margin-top: 10px;
+    box-sizing: content-box;
+    border-width: $box-border-width;
 
     img.commons-image {
         border: 0;
@@ -92,7 +124,7 @@ footer {
 }
 
 .link-card:hover {
-    border-color: $color;
+    border-color: $link-color;
 }
 
 ul.compact-list {
@@ -110,7 +142,7 @@ ul.compact-list li {
 
 div.map-view {
     margin-top: 8px;
-    width: 250px;
+    width: 100%;
     height: 275px;
 }
 
@@ -249,4 +281,83 @@ div.uv-wrapper {
 }
 
 #fullmap {
+}
+
+.search-results-body {
+    min-height: 50vh;
+}
+
+div.search-results .card {
+    border-width: $box-border-width;
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+
+div.search-results .card:hover {
+    border-color: $link-color;
+}
+
+
+div.search-results .card img {
+    box-sizing: border-box;
+    width: 118px;
+    height: 137px;
+    object-fit: cover;
+}
+
+div.search-results .card .text {
+    padding: 15px;
+    max-width: 100%;
+}
+.btn-search {
+    padding:0;
+    border: 0;
+}
+.btn-search img:last-child{display:none}
+.btn-search:hover img:first-child{display:none}
+.btn-search:hover img:last-child{display:inline-block}
+
+.card-body {
+    padding: 8px;
+    h4 {
+        font-size: 22px;
+    }
+}
+
+.home-body {
+    min-height: 50vh;
+}
+
+.home-text {
+    background: $const-bg;
+    border: 10px solid white;
+    color: white;
+    min-height: 100%;
+    padding: 50px;
+    h2 {
+        font-size: 25px;
+    }
+    .search-link {
+        text-align: center;
+        margin-top: 40px;
+    }
+}
+
+.hero {
+    padding: 10px;
+}
+
+.hero-img {
+    max-height:100%; max-width:100%;
+}
+
+.about-body {
+    min-height: 50vh;
+}
+
+.news-items {
+    ul {
+        list-style-type: square;
+    }
 }

@@ -17,7 +17,6 @@ const compareProperties = (a,b) => {
 const processLocations = (locations) => {
     let places = Object.values(locations);
     places = places.map((place) => {
-        console.log(place);
         place['value'] = '<ul>' + place.entity_properties.sort(compareProperties).map((p) => `<li><span class="map-property">${p.property_name}:</span> <a href="#" onclick="onLinkClick('/entity/${p.entity_id}'); return false" >${p.entity_name}</a></li>`).join('') + '</ul>';
         return place;
     })

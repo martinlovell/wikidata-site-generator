@@ -9,6 +9,9 @@ from PIL import Image
 import shutil
 import dateparser
 import gzip
+import string
+from bs4 import BeautifulSoup
+import markdown
 
 _logger = logging.getLogger(__name__)
 
@@ -20,6 +23,10 @@ wiki_cache_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wik
 
 disable_cache_check = False
 use_image_cache = True
+
+search_index = []
+
+site_json = {}
 
 if not os.path.exists(data_path):
     os.makedirs(data_path)
@@ -36,7 +43,6 @@ label_map = {}
 value_properties = ['P625']
 
 allowed_properties = None
-allowed_images = {}
 
 def configure_logging(name):
     root_logger = logging.getLogger()
@@ -122,48 +128,7 @@ class properties_dict(dict):
 
 entity_data = properties_dict({})
 
-def load_image_info(wikimedia_name):
-    if use_image_cache:
-        cache_file = os.path.join(wiki_cache_path, f'{wikimedia_name}.info.gz')
-        image_info = None
-        if os.path.exists(cache_file):
-            with gzip.open(cache_file, 'rt') as cf:
-                try:
-                    image_info = json.loads(cf.read())
-                except:
-                    _logger.error(f'Unable to read cache for {id}')
-        if image_info:
-            return image_info
-
-    info_url = f'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo|info&inprop=url&iiprop=url|size|mime&format=json&titles=File:{requests.utils.quote(wikimedia_name)}'
-    resp = requests_session.get(info_url)
-    info = resp.json()
-    image_info = find(info, 'query.pages.*.imageinfo')
-    if image_info and use_image_cache:
-        with gzip.open(cache_file, 'wt') as cf:
-            cf.write(json.dumps(image_info))
-    return image_info
-
-def convert_image(data_value, url, image_info_entry):
-    destination_file = f'{os.path.join(data_path, data_value)}.jpg'
-    cache_file = os.path.join(wiki_cache_path, f'{data_value}.jpg')
-    if use_image_cache and os.path.exists(cache_file):
-        image_info_entry['mime'] = 'image/jpeg'
-        image_info_entry['url'] = f'/data/{data_value}.jpg'
-        shutil.copy(cache_file, destination_file)
-        return
-    img = Image.open(requests_session.get(url, stream=True).raw)
-    rgb_im = img.convert("RGB")
-    if rgb_im.size[0] > 500:
-        rgb_im.thumbnail((500,500), Image.LANCZOS)
-    rgb_im.save(destination_file)
-    _logger.info(f'Converted image: {image_info_entry["url"]} to /data/{data_value}.jpg')
-    image_info_entry['url'] = f'/data/{data_value}.jpg'
-    image_info_entry['mime'] = 'image/jpeg'
-    if use_image_cache:
-        shutil.copy(destination_file, cache_file)
-
-def snack_data(snack, allowed_image_list):
+def snack_data(snack):
     value_data = None
     if snack:
         datatype = snack['datatype']
@@ -184,13 +149,8 @@ def snack_data(snack, allowed_image_list):
                 value_data['text'] = find(snack, 'datavalue.value.time')
                 if not value_data['text']:
                     _logger.error(f'No time info {snack}')
-                calendar_model = find(snack, 'datavalue.value.calendarmodel')
-                if calendar_model:
-                    calendar_model = calendar_model.replace('http://www.wikidata.org/entity/', '')
-                    value_data['calendar-model'] = entity_data[calendar_model]
-                timezone = find(snack, 'datavalue.value.timezone')
-                if timezone:
-                    value_data['timezone'] = timezone
+                else:
+                    value_data['text'] = value_data['text'][1:5]
             case 'wikibase-item' | 'wikibase-property':
                 id = find(snack, 'datavalue.value.id')
                 if not id:
@@ -222,36 +182,18 @@ def snack_data(snack, allowed_image_list):
                     return None
                 if unit:
                     value_data['unit'] = unit
-            case 'commonsMedia':
-                data_value = find(snack, 'datavalue.value')
-                if not data_value:
-                    return None
-                if allowed_image_list and not data_value in allowed_image_list:
-                    _logger.info(colored(f'skipping image {data_value}', 'yellow'))
-                    return None
-                value_data['name'] = data_value
-                image_info = load_image_info(data_value)
-                if image_info:
-                    if image_info[0]['mime'] == 'image/tiff':
-                        image_info[0]['name'] = data_value
-                        url = image_info[0]['url']
-                        try:
-                            convert_image(data_value, url, image_info[0])
-                        except Exception as e:
-                            _logger.error(f'Unable to convert image {image_info[0]["url"]}', e)
-
-                value_data['image-info'] = image_info
     return value_data
 
 
-def _load_props(props, allowed_images = []):
+def _load_props(props):
     if not props:
         return []
     props_data = []
     for key in props.keys():
-        prop_data = {'key': key, 'property': entity_data[key], 'values': []}
+        property_label = entity_data[key]['label']
+        prop_data = {'label': property_label, 'values': []}
         for prop in props[key]:
-            data = snack_data(prop, allowed_images)
+            data = snack_data(prop)
             if data:
                 prop_data['values'].append(data)
         if prop_data['values']:
@@ -266,10 +208,12 @@ def load_properties(entity_id, entity, include_refs_and_quals = True):
         property_keys = [p for p in property_keys if p in allowed_properties]
 
     for key in property_keys:
-        property_data = {'key': key, 'property': entity_data[key], 'values': []}
+        property_data = entity_data[key]
+        property_label = property_data['label']
+        property_data = {'label': property_label, 'values': []}
         for value in entity[key]:
             mainsnack = value.get('mainsnak', None)
-            value_data = snack_data(mainsnack, allowed_images.get(entity_id))
+            value_data = snack_data(mainsnack)
             if not value_data:
                 _logger.error(colored(f'No data for {key}', 'red'))
                 print(mainsnack)
@@ -280,24 +224,41 @@ def load_properties(entity_id, entity, include_refs_and_quals = True):
                     qs = _load_props(qualifiers)
                     if qs:
                         value_data['qualifiers'] = qs
-                    references_list = value.get('references', None)
-                    if references_list:
-                        rlist = []
-                        for references in references_list:
-                            references = references['snaks']
-                            rs = _load_props(references)
-                            if rs:
-                                rlist.append(rs)
-                        if rlist:
-                            value_data['references'] = rlist
             elif value_data != 'skip':
                 if not find(mainsnack, 'snaktype') == 'novalue':
                     _logger.error(f'Error with {entity_data[key]} ({key})')
             property_data['values'].append(value_data)
         _logger.debug(property_data)
         if property_data.get('values'):
-            all_props[key] = property_data
+            all_props[property_label] = property_data
+    consolidate_relatives(all_props)
     return all_props
+
+def consolidate_relatives(properties):
+    relatives = None
+    for relative in ['sibling', 'mother', 'father', 'spouse', 'parent']:
+        if relative in properties:
+            if not relatives:
+                relatives = properties.get('relative')
+                if not relatives:
+                    properties['relative'] = relatives = {
+                        "label": "relative",
+                        "values": []
+                    }
+            print("Replacing " + relative)
+            r = properties.pop(relative)
+            values = r['values']
+            qualifier = [{
+                            "label": "kinship to subject",
+                            "values": [
+                                {
+                                    "text": relative
+                                }
+                            ]
+                        }]
+            for v in values:
+                v['qualifiers'] = qualifier
+                relatives['values'].append(v)
 
 
 def load_claims(entity):
@@ -375,7 +336,7 @@ def create_entity_ref(entity):
     }
     if 'description' in entity:
         entity_ref['description'] = entity['description']
-    ref_properties = ['P569', 'P19', 'P570', 'P20', 'P18', 'P69']
+    ref_properties = ['date of birth', 'place of birth', 'date of death', 'place of death', 'image', 'educated at']
     entity_ref['properties'] = {}
     for ref_property in ref_properties:
         prop = entity['properties'].get(ref_property)
@@ -405,6 +366,19 @@ def extract_columns(column_names, line):
         row[column_name] = cols[ix].strip()
         ix += 1
     return row
+
+def load_image(id):
+    url = f'{site_json["images"]}{id}.jpg'
+    image = f'{data_path}/{id}.jpg'
+    r = requests_session.get(url, stream=True)
+    if r.status_code == 200:
+        with open(image, 'wb') as f:
+            for chunk in r:
+                f.write(chunk)
+        return True
+    else:
+        _logger.error(f'Unable to load remote image {r.status_code} {url} {id}')
+
 
 def load(id, bio_url_prefix = None, property_override_url_prefix = None, publications_url_prefix = None):
     entity = {}
@@ -444,10 +418,53 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
                 _logger.error(f'Error loading property overrides for {id} {e}')
                 print(response.text)
                 print(e)
-
+    if load_image(id):
+        entity['properties']['image'] = {
+            "label": "image",
+            "values": [
+                {
+                    "value-type": "commonsMedia",
+                    "name": entity['label'],
+                    "image-info": [
+                        {
+                            "url": f"/data/{id}.jpg",
+                            "mime": "image/jpeg"
+                        }
+                    ]
+                }
+            ]
+        }
     with open(os.path.join(data_path, f'{id}.json'), 'w') as file:
         file.write(json.dumps(entity, indent=4))
+        search_index.append(entity_index_entry(id, entity))
     add_to_entity_file(entity)
+
+
+def name_to_slug(name):
+    return name.translate(str.maketrans('', '', string.punctuation)).title().replace(' ', '')
+
+def markdown_to_text(md):
+    if not md:
+        return ''
+    html = markdown.markdown(md, extensions=['extra'])
+    soup = BeautifulSoup(html, features='html.parser')
+    return f'{soup.get_text()}'.replace(u"\u2018", "'").replace(u"\u2019", "'")
+
+def index_text(s, type):
+    return s
+
+def entity_index_entry(id, entity):
+    entry = {'id': id, 'Label': entity['label'], 'Biography': markdown_to_text(entity.get('biographyMarkdown')), 'Description': entity.get('description'), 'Publications': markdown_to_text(entity.get('publicationsMarkdown'))}
+    all_text = []
+    for prop in entity['properties'].values():
+        label = prop['label']
+        values = [index_text(v['text'], v.get('value-type')) for v in prop['values'] if 'text' in v]
+        if not values:
+            continue
+        all_text.extend(values)
+        entry[label] = values
+    entry['AllText'] = ' '.join(all_text)
+    return entry
 
 def load_ids(ids, bio_url_prefix = None, property_override_url_prefix= None, publications_url_prefix = None):
     for wikidata_id in ids:
@@ -501,12 +518,12 @@ def extract_location_information():
             entity_id = local_json['id']
             entity_name = local_json['label']
             for item in local_json['properties'].values():
-                property_id = item['key']
-                property_name = find(item, 'property.label')
+                property_id = item['label']
+                property_name = find(item, 'label')
                 for value in [i for i in item['values'] if i.get('value-type') == 'wikibase-item']:
                     value_id = value['id']
                     value_name = value['text']
-                    for value_coordinate_property in value.get('data', {}).get('properties', {}).get('P625', {}).get('values', []):
+                    for value_coordinate_property in value.get('data', {}).get('properties', {}).get('coordinate location', {}).get('values', []):
                         latitude = value_coordinate_property.get('latitude')
                         longitude = value_coordinate_property.get('longitude')
                         if latitude and longitude:
@@ -536,7 +553,7 @@ def compare_with_site(site):
             remote_json = get_response_json(response)
             if remote_json:
                 for item in local_json['properties'].values():
-                    remote_item = remote_json['properties'].get(item['key'])
+                    remote_item = remote_json['properties'].get(item['label'])
                     if remote_item and remote_item.get('status') == 'removed':
                         remote_item = None
                     if remote_item:
@@ -551,10 +568,10 @@ def compare_with_site(site):
                 for item in remote_json['properties'].values():
                     if item.get('status') == 'removed':
                         continue
-                    local_item = local_json['properties'].get(item['key'])
+                    local_item = local_json['properties'].get(item.get('label'))
                     if not local_item:
                         item['status'] = 'removed'
-                        local_json['properties'][item['key']] = item
+                        local_json['properties'][item.get('label')] = item
                         item_changed = True
                 if remote_json.get('label') != local_json.get('label'):
                     local_json['labelStatus'] = 'updated'
@@ -613,21 +630,6 @@ def compare_with_site(site):
     with open(os.path.join(data_path, f), 'w') as local_file:
         local_file.write(json.dumps(local_json, indent=4))
 
-
-def load_image_list(file):
-    response = requests_session.get(file)
-    if response.status_code == 200:
-        data = response.text
-        for line in data.split('\n'):
-            row = line.split('\t')
-            if len(row) < 3:
-                _logger.info(f'skipping row [{line}]')
-                continue
-            if row[0].startswith('Q'):
-                images = allowed_images.get(row[0], [])
-                images.append(row[2])
-                allowed_images[row[0]] = images
-
 def load_properties_list(file):
     global allowed_properties
     response = requests_session.get(file)
@@ -647,7 +649,7 @@ def load_properties_list(file):
 
 
 def main():
-    global allowed_properties, allowed_images, disable_cache_check, use_image_cache, data_path, wiki_cache_path
+    global allowed_properties, disable_cache_check, use_image_cache, data_path, wiki_cache_path, site_json
     configure_logging('wikiloader.log')
     parser = argparse.ArgumentParser(description='Load wikidata')
     group = parser.add_mutually_exclusive_group(required=True)
@@ -690,10 +692,6 @@ def main():
             load_properties_list(site_json.get('properties'))
             _logger.info(f'allowed properties update with {allowed_properties}')
 
-        if site_json.get('images'):
-            load_image_list(site_json.get('images'))
-            _logger.info(f'allowed images update with {allowed_images}')
-
         if site_json.get('idList'):
             id_list = site_json['idList']
             if isinstance(id_list, str):
@@ -716,6 +714,8 @@ def main():
         load_sparql_results(sparql)
 
     extract_location_information()
+    with open(os.path.join(data_path, 'search_index.json'), 'w') as f:
+        json.dump(search_index, f)
 
     if args.compare_site:
         compare_with_site(args.compare_site)
