@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BoxArrowUpRight, GeoAltFill, InfoCircleFill } from 'react-bootstrap-icons';
-import { formatWikiDateTime, showImages } from './Utilities';
+import { formatWikiDateTime, imagePath, showImages } from './Utilities';
 import UVViewer from './components/UV'
 import {OverlayTrigger, Tooltip } from 'react-bootstrap';
 import Map from './components/Map';
