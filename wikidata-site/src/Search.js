@@ -33,8 +33,8 @@ const Search = ({searchResults, searchFor, unquotedResults}) => {
             <div className="flex-grow-1 me-2"><input onChange={onSearchChange} className="w-100" value={searchField} onKeyDown={e => e.key === 'Enter' && onGetResults()}/></div>
             <div>
                 <button className="btn btn-search" onClick={onGetResults}>
-                    <img alt="Search" src="/assets/search.png"/>
-                    <img alt="Search" src="/assets/search-hover.png"/>
+                    <img alt="Search" src={imagePath('/assets/search.png')}/>
+                    <img alt="Search" src={imagePath('/assets/search-hover.png')}/>
                 </button>
             </div>
         </div>
@@ -64,7 +64,7 @@ function SearchResult({result}) {
     return <div className="card" key={result['id']}><Link to={link} className="stretched-link"></Link>
         <div className="d-flex  flex-wrap flex-sm-nowrap">
             <div className="">
-                <img src={`/data/${result['id']}.jpg`}
+                <img src={imagePath(`/data/${result['id']}.jpg`)}
                     onError={({ currentTarget }) => {
                         currentTarget.onerror = null; // prevents looping
                         currentTarget.src = "/assets/img-not-found.png";

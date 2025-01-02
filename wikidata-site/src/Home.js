@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { imagePath } from './Utilities';
 
 
 const Home = () => {
     const navigate = useNavigate();
     return <div className='container-fluid'>
         <div className="row justify-content-center home-body">
-            <div className='col-lg-8 hero'><img alt="home hero image" className='hero-img' src="/assets/hero-1.png" /></div>
+            <div className='col-lg-8 hero'><img alt="home hero image" className='hero-img' src={imagePath('/assets/hero-1.png')} /></div>
             <div className='col-lg-4 home-text'>
                 <h1>Early Black Students at Yale</h1>
                 <h2>A project to identify and share research about early Black students at Yale, 1830 to 1940</h2>
