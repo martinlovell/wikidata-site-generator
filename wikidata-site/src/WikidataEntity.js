@@ -228,7 +228,7 @@ const WikidataEntity = () => {
                                 <a href={`https://www.wikidata.org/wiki/${id}`} target='_blank'>View Wikidata</a>
                             </div>
                             <div className='font-weight-bold'>
-                                <a href={`/data/${id}.json`} target='_blank'>View Exhibit Data</a>
+                                <a href={imagePath(`/data/${id}.json`)} target='_blank'>View Exhibit Data</a>
                             </div>
                         </div>
                     </div>
