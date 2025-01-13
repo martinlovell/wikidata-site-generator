@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { formatWikiDateTime, showImages } from './Utilities';
 
 const extractFirstPropertyValue = (properties, propertyKey) => {
@@ -18,17 +18,6 @@ const extractFirstPropertyValue = (properties, propertyKey) => {
     return '';
 }
 
-const extractPropertyList = (properties, propertyKey) => {
-    if (properties[propertyKey]) {
-        let prop = properties[propertyKey];
-        let values = prop['values'];
-        return <ul className='compact-list'>{values.map((value, index)=> {
-            let valueText = value['text'];
-            return <li key={index}><small>{valueText}</small></li>
-        })}</ul>
-    }
-}
-
 const EntityLink = ({id, description, label, properties, status}) => {
     let link = `/entity/${id}`
     let additionalProperties = []
@@ -36,15 +25,15 @@ const EntityLink = ({id, description, label, properties, status}) => {
     let dod = extractFirstPropertyValue(properties, 'P570');
     if (dob || dod) additionalProperties.push(`${dob} - ${dod}`);
 
-    return <div className={'card link-card' + (status && ` status-${status}` || '')} key={id}>
-                {status != 'removed' && <Link to={link} className="stretched-link"></Link>}
+    return <div className={'card link-card' + ((status && ` status-${status}`) || '')} key={id}>
+                {status !== 'removed' && <Link to={link} className="stretched-link"></Link>}
                 {showImages(properties, 'wiki-image commons-image')}
                 <div className="card-body">
                     <h4 className="card-title">{label}</h4>
                     <p className="card-text">{description}</p>
                     {/* {additionalProperties.map((p, index)=><p key={index} className="card-text">{p}</p>)}
                     {extractPropertyList(properties, 'P69')} */}
-                    {status != 'removed' && <Link to={link} className="visually-hidden">View</Link>}
+                    {status !== 'removed' && <Link to={link} className="visually-hidden">View</Link>}
                 </div>
            </div>
 }
@@ -61,15 +50,14 @@ const entitySort = (a,b) => {
 }
 
 const People = () => {
-    let { json_file } = useParams();
     let [entityList, setEntityList] = useState(null);
     const basename = document.querySelector('base')?.getAttribute('href') ?? '/'
     useEffect(() => {
-        fetch(`${basename}/data/${json_file || 'entity_list'}.json`)
+        fetch('entity_list.json')
             .then(response => response.json())
             .then(data => setEntityList(data))
             .catch(error => console.error(error));
-    }, [json_file, basename]);
+    }, [basename]);
 
     if (entityList) {
         return (

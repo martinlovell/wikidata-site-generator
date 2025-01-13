@@ -1,7 +1,5 @@
 import { format } from "date-fns";
-import { Accordion, Carousel } from 'react-bootstrap';
 import CommonsMedia from "./components/CommonsMedia";
-import PropertyInfo from "./components/PropertyInfo";
 
 const basename = document.querySelector('base')?.getAttribute('href') ?? '/';
 

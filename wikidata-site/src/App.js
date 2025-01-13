@@ -25,7 +25,7 @@ const quotedText = (s) => {
 
 const normalize = (s) => {
   if (Array.isArray(s)) return s.map(v=>normalize(v)).join(' ');
-  return s && s.replace(/[\.,-\/#!$%\^&\*;:{}=\-_`~()@\+\?"'><\[\]\+']/g, '').replace(/\s{2,}/g," ").toLowerCase();
+  return s && s.replace(/[.,-/#!$%^&*;:{}=\-_`~()@+?"'><[\]+']/g, '').replace(/\s{2,}/g," ").toLowerCase();
 }
 
 function ScrollToTop() {
@@ -41,7 +41,6 @@ function ScrollToTop() {
 function App() {
   const [title, setTitle] = useState('')
   const [about, setAbout] = useState('')
-  const [sparql, setSparql] = useState('')
   const [copyright, setCopyright] = useState('')
   const [idx, setIdx] = useState()
   const [searchData, setSearchData] = useState()
@@ -58,7 +57,6 @@ function App() {
         document.title = data['title'];
         setAbout(data['about']);
         setCopyright(data['copyright']);
-        setSparql(data['sparql'])
       })
       .catch(error => console.error(error));
   }, [basename]);
@@ -149,8 +147,6 @@ function App() {
           <Route path="map" element={<FullMap />} />
           <Route path="search" element={<Search searchFor={searchFor} searchResults={searchResults} searchString={searchString} unquotedResults={unquotedResults} />} />
           <Route path="search/:searchparam" element={<Search searchFor={searchFor} searchResults={searchResults} searchString={searchString} unquotedResults={unquotedResults}/>} />
-          <Route path=":list/entity/:id" element={<WikidataEntity />} />
-          <Route path=":json_file" element={<Home />} />
         </Routes>
       </div>
       <Footer copyright={copyright} ></Footer>

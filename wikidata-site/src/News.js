@@ -1,9 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 
 
 const News = () => {
-    const navigate = useNavigate();
     const newsItems = [
         {heading: "News Item 1", text: "New Item 1 text. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940."},
         {heading: "News Item 2", text: "New Item 2 text. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940."},

@@ -4,7 +4,7 @@ import Map from "./components/Map";
 
 const compareProperties = (a,b) => {
     let c = a.property_name.localeCompare(b.property_name);
-    if (c == 0) {
+    if (c === 0) {
         let aN = a.entity_name.split(' ');
         let bN = b.entity_name.split(' ');
         while (aN.at(-1).endsWith('.')) aN.pop();
@@ -35,7 +35,7 @@ const FullMap = () => {
             .then(response => response.json())
             .then(data => setLocationInformation(data))
             .catch(error => console.error(error));
-    }, [basename]);
+    }, [basename, navigate]);
 
     if (locationInformation) {
         return (

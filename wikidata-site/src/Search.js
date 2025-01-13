@@ -3,7 +3,6 @@ import { imagePath } from "./Utilities"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router";
-import { Col, Row } from "react-bootstrap";
 
 const Search = ({searchResults, searchFor, unquotedResults}) => {
 
@@ -14,7 +13,7 @@ const Search = ({searchResults, searchFor, unquotedResults}) => {
 
     useEffect(()=>{
         searchFor(searchString || "");
-    }, [searchString]);
+    }, [searchString, searchFor]);
 
     const onSearchChange = (e) => {
         setSearchField(e.target.value);
@@ -22,9 +21,6 @@ const Search = ({searchResults, searchFor, unquotedResults}) => {
 
     const onGetResults = () => {
         navigate('/search/' + searchField)
-    }
-
-    const onClearSearch = () => {
     }
 
     return <div>
@@ -68,7 +64,8 @@ function SearchResult({result}) {
                     onError={({ currentTarget }) => {
                         currentTarget.onerror = null; // prevents looping
                         currentTarget.src = imagePath('/assets/img-not-found.png');
-                    } } />
+                    } }
+                    alt="portrait"/>
             </div>
             <div className="">
                 <div className="text">

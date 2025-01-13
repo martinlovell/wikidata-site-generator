@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom"
 import { imagePath } from "./Utilities"
-import { Button, Dropdown, DropdownButton, DropdownMenu, DropdownToggle } from "react-bootstrap"
-import { List, MenuButton } from "react-bootstrap-icons"
+import { Dropdown} from "react-bootstrap"
+import { List } from "react-bootstrap-icons"
 
 const Header = ({title, searchString}) =>
     <div className="row bg-header header">
         <div className="col-lg-6">
-            <Link to="/"><img alt="constellations" src={imagePath('/assets/header.png?1')} /></Link>
+            <Link to="/" title="Home"><img alt="Home" src={imagePath('/assets/header.png?1')} /></Link>
             <div className="dropdown d-inline-block d-md-none">
                 <Dropdown>
                     <Dropdown.Toggle><List /></Dropdown.Toggle>

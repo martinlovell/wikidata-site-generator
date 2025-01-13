@@ -1,11 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BoxArrowUpRight, GeoAltFill, InfoCircleFill } from 'react-bootstrap-icons';
+import { BoxArrowUpRight, GeoAltFill } from 'react-bootstrap-icons';
 import { formatWikiDateTime, imagePath, showImages } from './Utilities';
-import UVViewer from './components/UV'
-import {OverlayTrigger, Tooltip } from 'react-bootstrap';
 import Map from './components/Map';
-import { VideoViewer } from './components/VideoViewer';
 import CommonsMedia from './components/CommonsMedia';
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -96,19 +93,19 @@ const Publication = ({publication, ix}) => {
       {publication['journal'] && `, ${publication['journal']}`}
       {publication['date'] && ` - ${publication['date']}`}
       {publication['authors'] && ` (with: ${publication['authors']})`}
-      {publication['link'] && <a href={publication['link']} title={publication['title']} target="_blank"><BoxArrowUpRight className='info-icon' /></a> }
+      {publication['link'] && <a href={publication['link']} title={publication['title']}  rel="noreferrer" target="_blank"><BoxArrowUpRight className='info-icon' /></a> }
     </div>
 }
 
 
 function listPublications(publications, publicationsStatus) {
     if (publications)
-        return <div className={publicationsStatus && `status-${publicationsStatus}` || ''}><div className='property-name'>Publications</div><div className='publications'>{publications.map((p, ix) => <Publication publication={p} ix={ix} />)}</div></div>
+        return <div className={(publicationsStatus && `status-${publicationsStatus}`) || ''}><div className='property-name'>Publications</div><div className='publications'>{publications.map((p, ix) => <Publication publication={p} ix={ix} />)}</div></div>
 }
 
 function listProperties(properties, setHighlightedPlace, map) {
     return sortProperties(Object.values(properties)).filter((property) => !specialProperties.includes(property.label)).map((property, index) => {
-        return <div key={index} className={property['status'] && `status-${property['status']}` || ''}>{!noNamePropeties.includes(property.label) && <div className='property-name'>{property.label}</div>}
+        return <div key={index} className={(property['status'] && `status-${property['status']}`) || ''}>{!noNamePropeties.includes(property.label) && <div className='property-name'>{property.label}</div>}
             <PropertyInfo property={property} />
             {property.values.map((value, index) =>
                     // check for duplicates
@@ -204,14 +201,13 @@ const WikidataEntity = () => {
 
     if (entityData) {
         return <>
-            {entityData['status'] == 'new'}
-            {entityData.biographyMarkdown ? <></> : <><h1 className={(entityData['labelStatus'] && ` status-${entityData['labelStatus']}` || '')}>{entityData.label}</h1>{entityData.description && <h4 className={(entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}` || '')}>{entityData.description}</h4>}</>}
+            {entityData.biographyMarkdown ? <></> : <><h1 className={((entityData['labelStatus'] && ` status-${entityData['labelStatus']}`) || '')}>{entityData.label}</h1>{entityData.description && <h4 className={((entityData['descriptionStatus'] && ` status-${entityData['descriptionStatus']}`) || '')}>{entityData.description}</h4>}</>}
             <div className='row'>
                 <div className='col-md mt-3'>
                     {showImages(entityData.properties, 'w-100', 'wiki-image-nf-page')}
                 </div>
                 <div className='col-md properties-list mt-3'>
-                {entityData.biographyMarkdown && <div className={'markdown' + (entityData['biographyMarkdownStatus'] && ` status-${entityData['biographyMarkdownStatus']}` || '')}><Markdown remarkPlugins={[remarkGfm]}>{entityData.biographyMarkdown}</Markdown></div>}
+                {entityData.biographyMarkdown && <div className={'markdown' + ((entityData['biographyMarkdownStatus'] && ` status-${entityData['biographyMarkdownStatus']}`) || '')}><Markdown remarkPlugins={[remarkGfm]}>{entityData.biographyMarkdown}</Markdown></div>}
                 {
                     entityData['publications'] && listPublications(entityData['publications'], entityData['publicationsStatus'])
                 }
@@ -225,10 +221,10 @@ const WikidataEntity = () => {
                     <div className='property-name'>Links</div>
                         <div className='property-values' key={'links'}>
                             <div className='font-weight-bold'>
-                                <a href={`https://www.wikidata.org/wiki/${id}`} target='_blank'>View Wikidata</a>
+                                <a href={`https://www.wikidata.org/wiki/${id}`} rel="noreferrer" target='_blank'>View Wikidata</a>
                             </div>
                             <div className='font-weight-bold'>
-                                <a href={imagePath(`/data/${id}.json`)} target='_blank'>View Exhibit Data</a>
+                                <a href={imagePath(`/data/${id}.json`)} rel="noreferrer" target='_blank'>View Exhibit Data</a>
                             </div>
                         </div>
                     </div>

@@ -80,7 +80,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon
                 }
                 if (fullscreenchange) {
                     document.addEventListener(fullscreenchange, (e)=>{
-                        if (e.target?.id == id) {
+                        if (e.target?.id === id) {
                             if (points.length > 1) {
                                 map.current.fitBounds(points);
                                 if (map.current.getZoom() > 6) {
@@ -101,7 +101,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon
 
         if (places.length > 0 && map.current && highlightedPlace) {
             map.current.eachLayer(function (layer) {
-                if (layer.options._id == highlightedPlace) {
+                if (layer.options._id === highlightedPlace) {
                     layer.openTooltip();
                 } else {
                     layer.closeTooltip();
@@ -109,7 +109,7 @@ const Map = ({id, places, highlightedPlace, fullscreen, className, refpass, icon
             });
         }
 
-    }, [id, places, highlightedPlace, fullscreen]);
+    }, [id, places, highlightedPlace, fullscreen, icon, popups]);
     return <div id={id} className={className} ></div>
 }
 
