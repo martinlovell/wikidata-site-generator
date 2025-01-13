@@ -468,6 +468,8 @@ def upload_images(item_id, dt):
     return images
 
 def create_full_map_page():
+    if not 'test' in OMEKA_API:
+        return
     title = important_places_title
     page_data = {
         '@type': 'o:SitePage',
@@ -791,6 +793,8 @@ def home_page_html(site_data):
 
 
 def update_site():
+    if not 'test' in OMEKA_API:
+        return
     if not description_by_label.keys():
         load_descriptions()
     omeka_site = omeka_api_get(f'/sites/{OMEKA_SITE}', {})
@@ -961,12 +965,16 @@ def main():
 
     site = omeka_api_get(f'/sites?slug={OMEKA_SITE_SLUG}', {})
     if not site:
+        print('Site not found, exiting')
+        exit(1)
         site = create_site()
     else:
         site = site[0]
     OMEKA_SITE = site['o:id']
     item_set = omeka_api_get(f'/item_sets?property[0][property]=dcterms:title&property[0][text]={OMEKA_ITEMSET_TITLE}&property[0][type]=eq',{})
     if not item_set:
+        print('Set not found, exiting')
+        exit(1)
         item_set = create_set()
     else:
         item_set = item_set[0]
