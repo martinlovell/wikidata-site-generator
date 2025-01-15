@@ -186,8 +186,6 @@ def value_to_omeka_property(label, property_value):
     if value.startswith('http'):
             return {'type': 'uri', '@id': value, 'property_label': label.title(), 'property_id': property_ids[property_map[label]]
             }
-    if property_value['value-type'] == 'time':
-        value =  value[1:5]
     resource_class = resource_class_map.get(label)
     relationship = property_map[label]
     if relationship == 'schema:relatedTo':
