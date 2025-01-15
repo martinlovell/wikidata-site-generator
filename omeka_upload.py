@@ -19,6 +19,7 @@ OMEKA_ITEM_SET=os.environ.get('OMEKA_ITEM_SET')
 OMEKA_SITE_SLUG=os.environ.get('OMEKA_SITE_SLUG')
 OMEKA_ITEMSET_TITLE=os.environ.get('OMEKA_ITEMSET_TITLE')
 OMEKA_MAPPING_FEATURE='marker'
+UPDATE_SITE=False
 
 important_places_title = 'Important Places'
 
@@ -466,7 +467,7 @@ def upload_images(item_id, dt):
     return images
 
 def create_full_map_page():
-    if not 'test' in OMEKA_API:
+    if not UPDATE_SITE:
         return
     title = important_places_title
     page_data = {
@@ -791,7 +792,7 @@ def home_page_html(site_data):
 
 
 def update_site():
-    if not 'test' in OMEKA_API:
+    if not UPDATE_SITE:
         return
     if not description_by_label.keys():
         load_descriptions()
