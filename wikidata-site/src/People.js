@@ -53,7 +53,7 @@ const People = () => {
     let [entityList, setEntityList] = useState(null);
     const basename = document.querySelector('base')?.getAttribute('href') ?? '/'
     useEffect(() => {
-        fetch('entity_list.json')
+        fetch(`${basename}/entity_list.json`)
             .then(response => response.json())
             .then(data => setEntityList(data))
             .catch(error => console.error(error));
