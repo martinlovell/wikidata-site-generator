@@ -458,7 +458,7 @@ def upload_images(item_id, dt):
         images.append(upload_media_for_item(item_id, citation.replace("Image citation: ", ""), dt.get('name'), img)['o:id'])
         ix += 1
 
-        shutil.copyfile(img, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'images', f'{id}.jpg'))
+        shutil.copyfile(img, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'images', f'{item_id}.jpg'))
 
 
         if temp_image:

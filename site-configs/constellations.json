@@ -1,6 +1,6 @@
 {
     "title": "Shining Light on Truth: Early Black Lives at Yale, 1830-1940",
-    "about": "A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940. A project to identify and share research about early Black students at Yale, 1830 to 1940.",
+    "about": "A project to identify and share research about early Black students at Yale, 1830 to 1940.",
     "copyright": "Yale University",
     "sparql": "SELECT DISTINCT ?item ?itemLabel WHERE {\n  SERVICE wikibase:label { bd:serviceParam wikibase:language \"[AUTO_LANGUAGE]\". }\n  {\n    SELECT DISTINCT ?item ?date_update WHERE {\n      ?item_biography p:P361 ?statement0.\n      ?statement0 (ps:P361/(wdt:P279*)) wd:Q130268200.\n      ?item_biography p:P921 ?statement1.\n      ?statement1 (ps:P921/(wdt:P279*)) ?item.\n    }\n    LIMIT 10000\n  }\n} ORDER BY ?itemLabel",
     "bioUrlPrefix": "https://raw.githubusercontent.com/yalelibrary/constellations-data/main/biographies/",
