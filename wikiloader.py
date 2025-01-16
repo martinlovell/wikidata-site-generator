@@ -401,7 +401,11 @@ def load(id, bio_url_prefix = None, property_override_url_prefix = None, publica
         if text:
             entity['publicationsMarkdown'] = text
 
-    entity['properties'] = load_claims(wiki_entity)
+    try:
+        entity['properties'] = load_claims(wiki_entity)
+    except:
+        _logger.error(f'Unable to load claims, skipping id {id}')
+        return
     if property_override_url_prefix:
         response = requests_session.get(f'{property_override_url_prefix}{id}.json')
         if response.status_code == 200:
