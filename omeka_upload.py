@@ -20,6 +20,7 @@ OMEKA_SITE_SLUG=os.environ.get('OMEKA_SITE_SLUG')
 OMEKA_ITEMSET_TITLE=os.environ.get('OMEKA_ITEMSET_TITLE')
 OMEKA_MAPPING_FEATURE='marker'
 UPDATE_SITE=False
+DRY_RUN_ISH=True
 
 important_places_title = 'Important Places'
 
@@ -236,11 +237,11 @@ def value_to_omeka_property(label, property_value):
                     'schema:sameAs': [{'type': 'uri', '@id': f'https://www.wikidata.org/wiki/{property_value["id"]}', 'o:label': 'Wikidata', 'property_id': property_ids['schema:sameAs']}]
             }
             resources[property_value['id']] = resource
-            coordinates = property_value.get('data', {}).get('properties', {}).get('P625')
+            coordinates = property_value.get('data', {}).get('properties', {}).get('coordinate location')
             if coordinates:
                 resource['o-module-mapping:mapping'] = {'@type': 'o-module-mapping:Map', 'o-module-mapping:bounds': get_bounding_box(coordinates['values'][0]['latitude'], coordinates['values'][0]['longitude'], 100)}
                 resource[f'o-module-mapping:{OMEKA_MAPPING_FEATURE}'] = [{
-                    '@type': f'o-module-mapping:{OMEKA_MAPPING_FEATURE}', 'o-module-mapping:geography-type': 'Point'
+                    '@type': f'o-module-mapping:{OMEKA_MAPPING_FEATURE.title()}', 'o-module-mapping:geography-type': 'Point'
                 }]
                 feature = resource[f'o-module-mapping:{OMEKA_MAPPING_FEATURE}'][0]
                 if OMEKA_MAPPING_FEATURE == 'marker':
@@ -250,6 +251,7 @@ def value_to_omeka_property(label, property_value):
                 else:
                     feature['o-module-mapping:geography-coordinates'] = [coordinates['values'][0]['longitude'], coordinates['values'][0]['latitude']]
 
+                print(json.dumps(resource, indent=4))
             oid = save_resource(property_value['id'], resource)['o:id']
             if coordinates:
                 property_values_with_mapping.add(oid)
@@ -374,15 +376,17 @@ def load_data():
                 add_properties_with_location_to_map(dt['item'])
                 omeka_item = save_resource(entity_json['id'], dt['item'])
                 item_id = omeka_item['o:id']
+                upload_images(item_id, dt)
                 if 'biography_html' in dt:
                     upload_html_for_item(item_id, 'Biography', dt['biography_html'])
                 if 'publications_html' in dt:
                     upload_html_for_item(item_id, 'Publications', dt['publications_html'])
                     #_logger.info(f'Added publication to {entity_json["label"]}')
-                upload_images(item_id, dt)
                 title = dt['item']['o:title'][0]['@value']
                 item_ids_by_slug[name_to_slug(title)] = item_id
                 #_logger.info(f'Uploaded {entity_json["label"]}  {item_id}')
+                if DRY_RUN_ISH:
+                    exit(0)
     create_full_map_page()
 
 def add_properties_with_location_to_map(item):
