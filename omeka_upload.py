@@ -20,7 +20,7 @@ OMEKA_SITE_SLUG=os.environ.get('OMEKA_SITE_SLUG')
 OMEKA_ITEMSET_TITLE=os.environ.get('OMEKA_ITEMSET_TITLE')
 OMEKA_MAPPING_FEATURE='marker'
 UPDATE_SITE=False
-DRY_RUN_ISH=True
+MAX_OBJECTS=5
 
 important_places_title = 'Important Places'
 
@@ -250,8 +250,6 @@ def value_to_omeka_property(label, property_value):
                     feature['o-module-mapping:label'] = property_value['text']
                 else:
                     feature['o-module-mapping:geography-coordinates'] = [coordinates['values'][0]['longitude'], coordinates['values'][0]['latitude']]
-
-                print(json.dumps(resource, indent=4))
             oid = save_resource(property_value['id'], resource)['o:id']
             if coordinates:
                 property_values_with_mapping.add(oid)
@@ -315,6 +313,7 @@ def load_data():
     pnames = set()
     pattern = r'Q\d+?\.json'
     #pattern = r'Q7108504.json'
+    cnt = 0
     for f in os.listdir(data_path):
         if re.match(pattern,f):
             entity_file_name = os.path.join(data_path, f)
@@ -385,7 +384,8 @@ def load_data():
                 title = dt['item']['o:title'][0]['@value']
                 item_ids_by_slug[name_to_slug(title)] = item_id
                 #_logger.info(f'Uploaded {entity_json["label"]}  {item_id}')
-                if DRY_RUN_ISH:
+                cnt += 1
+                if cnt > MAX_OBJECTS:
                     exit(0)
     create_full_map_page()
 
